@@ -21,12 +21,19 @@ def propogate_subset_labels(parent_adata, subset_adata, key_added, key_to_add, m
     if key_added not in adata_new.obs.columns:
         adata_new.obs[key_added] = np.nan
 
-    adata_new.obs = adata_new.obs.merge(subset_adata.obs[[merge_on, key_to_add]], how="left", on=merge_on)
-    adata_new.obs[[key_added, key_to_add]] = adata_new.obs[[key_added, key_to_add]].astype('object')
-    
-    mask = adata_new.obs[key_to_add].notna()    
-    adata_new.obs.loc[mask, key_added] = adata_new.obs.loc[mask, key_to_add]
+    # Build a lookup from merge key -> label, avoiding merge suffix collisions
+    # when key_added and key_to_add are the same column name.
+    subset_lookup = (
+        subset_adata.obs[[merge_on, key_to_add]]
+        .dropna(subset=[key_to_add])
+        .drop_duplicates(subset=[merge_on], keep="last")
+        .set_index(merge_on)[key_to_add]
+    )
+
+    propagated = adata_new.obs[merge_on].map(subset_lookup)
+    adata_new.obs[key_added] = adata_new.obs[key_added].astype("object")
+    mask = propagated.notna()
+    adata_new.obs.loc[mask, key_added] = propagated.loc[mask].values
     adata_new.obs[key_added] = adata_new.obs[key_added].astype("category")
-    adata_new.obs.drop(columns=[key_to_add], inplace=True)
-    
+
     return adata_new
