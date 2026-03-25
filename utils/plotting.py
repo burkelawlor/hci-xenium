@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import squidpy as sq
 import scanpy as sc
-
+import anndata as ad
 
 def spatial_plot_cell_types_layered(
     adata,
@@ -14,6 +14,7 @@ def spatial_plot_cell_types_layered(
     save=False,
     figsize=None,
     n_cols=None,
+    size=1
 ):
     sample_names = sorted(adata.obs["sample_name"].unique())
     n = len(sample_names)
@@ -47,12 +48,16 @@ def spatial_plot_cell_types_layered(
             legend_cats = list(adata_sample.obs[ct_col].cat.categories)
             legend_colors = np.asarray(adata_sample.uns[f'{ct_col}_colors'])
 
+        # Sort so that NA cells are on top and plotted first (to be on the bottom)
+        adata_sorted = ad.concat([adata_sample[adata_sample.obs[ct_col].isna()], adata_sample[adata_sample.obs[ct_col].notna()]], uns_merge='first')
+        adata_sorted.uns[f'{ct_col}_colors'] = adata_sample.uns[f'{ct_col}_colors']
+        
         ax = sq.pl.spatial_scatter(
-            adata_sample,
+            adata_sorted,
             library_id="spatial",
             shape=None,
             color=[ct_col],
-            size=1,
+            size=size,
             na_color='lightgray',
             return_ax=True,
             ax=axes[i],
