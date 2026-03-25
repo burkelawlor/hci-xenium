@@ -218,7 +218,7 @@ def feature_plots_from_marker_genes(adata, marker_genes_dict, save=False, prefix
         plt.show()
 
 
-def plot_proportions(adata, groupby, ct_col, palette=None, save=False, figsize=None, title='default'):
+def plot_proportions_bar(adata, groupby, ct_col, palette=None, save=False, figsize=None, title='default'):
     proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
     if palette is None:
         try:
@@ -234,7 +234,52 @@ def plot_proportions(adata, groupby, ct_col, palette=None, save=False, figsize=N
         plt.title(title)
     
     if save == True:
-        plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}.png", bbox_inches="tight")
+        plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}_bar.png", bbox_inches="tight")
+    elif isinstance(save, str):
+        plt.savefig(f"./figures/proportions/{save}.png", bbox_inches="tight")
+    plt.show()
+
+
+def plot_proportions_line(adata, groupby, ct_col, order=None, palette=None, save=False, figsize=None, title='default'):
+    proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
+
+    # Ensure the x-tick order
+    if order is None:
+        x_ticks = list(proportions.index)
+    else:   
+        x_ticks = order
+    x_pos = range(len(x_ticks))
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    for cell_type in proportions.columns:
+        y = [proportions.loc[idx, cell_type] if idx in proportions.index else np.nan for idx in x_ticks]
+        
+        if palette is None:
+            try:
+                groups = adata.obs[ct_col].cat.categories
+                colors = adata.uns[f'{ct_col}_colors']
+                palette = dict(zip(groups, colors))
+                ax.plot(x_pos, y, marker='o', label=cell_type, color=palette[cell_type])
+            except:
+                ax.plot(x_pos, y, marker='o', label=cell_type)
+        else:
+            ax.plot(x_pos, y, marker='o', label=cell_type, color=palette[cell_type])
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(x_ticks)
+    ax.set_ylabel('Proportion')
+
+    if title == 'default':
+        plt.title(f"{ct_col} proportions by {groupby}")
+    else:
+        plt.title(title)
+
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+
+    if save == True:
+        plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}_line.png", bbox_inches="tight")
     elif isinstance(save, str):
         plt.savefig(f"./figures/proportions/{save}.png", bbox_inches="tight")
     plt.show()
