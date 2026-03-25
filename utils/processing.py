@@ -4,7 +4,7 @@ import scanpy as sc
 import anndata as ad
 
 
-def propogate_subset_labels(parent_adata, subset_adata, key_added, key_to_add, merge_on):
+def propogate_subset_labels(parent_adata, subset_adata, key_added, key_to_add, merge_on='cell_id_unique'):
     """
     Propogate labels from subset_adata.obs[key_to_add] to parent_adata.obs[key_added].
 
