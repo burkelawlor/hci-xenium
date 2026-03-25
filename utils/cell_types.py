@@ -7,6 +7,7 @@ CELL_TYPES_DETAILED: CellTree = {
     "Endothelial": {},
     "Fibroblast": {},
     "Keratinocytes": {},
+    "Melanocyte": {},
     "Immune": {
         "B cell": [],
         "T cell": [
