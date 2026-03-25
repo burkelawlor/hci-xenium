@@ -218,12 +218,12 @@ def feature_plots_from_marker_genes(adata, marker_genes_dict, save=False, prefix
         plt.show()
 
 
-def plot_proportions(adata, groupby, ct_col, save=False):
+def plot_proportions(adata, groupby, ct_col, save=False, figsize=None):
     proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
     try:
-        proportions.plot.barh(stacked=True, color=adata.uns[f'{ct_col}_colors'])
+        proportions.plot.barh(stacked=True, color=adata.uns[f'{ct_col}_colors'], figsize=figsize)
     except:
-        proportions.plot.barh(stacked=True)
+        proportions.plot.barh(stacked=True, figsize=figsize)
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.title(f"{ct_col} proportions by {groupby}")
     if save:
