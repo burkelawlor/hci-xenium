@@ -1,5 +1,6 @@
 import math
 from matplotlib.colors import ListedColormap
+from matplotlib.patches import Patch
 import matplotlib.pyplot as plt
 import numpy as np
 import squidpy as sq
@@ -7,43 +8,85 @@ import scanpy as sc
 
 
 def spatial_plot_cell_types_layered(
-    adata, 
-    sample_name, 
-    ct_col, 
-    subset=False, 
+    adata,
+    ct_col,
+    subset=False,
     save=False,
-    figsize=None
+    figsize=None,
+    n_cols=None,
 ):
+    sample_names = sorted(adata.obs["sample_name"].unique())
+    n = len(sample_names)
+    if n == 0:
+        return
+    if n_cols is None:
+        ncols = min(3, n)
+    else:
+        ncols = max(1, min(int(n_cols), n))
+    nrows = math.ceil(n / ncols)
+    if figsize is None:
+        figsize = (4 * ncols, 4 * nrows)
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
+    axes = np.ravel(np.atleast_1d(axes))
 
-    adata_sample = adata[adata.obs["sample_name"] == sample_name].copy()
+    legend_cats = None
+    legend_colors = None
 
-    if subset:
-        cats = adata_sample.obs[ct_col].cat.categories
-        colors = adata_sample.uns.pop(f'{ct_col}_colors')
-        colors_mask = cats.isin(subset)
-        
-        adata_sample.obs[ct_col] = np.select([adata_sample.obs[ct_col].isin(subset)], [adata_sample.obs[ct_col]], np.nan)
-        adata_sample.uns[f'{ct_col}_colors'] = colors[colors_mask]
-        
-    fig, ax = plt.subplots(1,1, figsize=figsize)
-        
-    ax = sq.pl.spatial_scatter(
-        adata_sample,
-        library_id="spatial",
-        shape=None,
-        color=[ct_col],
-        size=1,
-        na_color='lightgray',
-        return_ax=True,
-        ax=ax
-    )
+    for i, sample_name in enumerate(sample_names):
+        adata_sample = adata[adata.obs["sample_name"] == sample_name].copy()
 
-    ax.set_axis_off()
-    plt.title(sample_name)
+        if subset:
+            cats = adata_sample.obs[ct_col].cat.categories
+            colors = adata_sample.uns.pop(f'{ct_col}_colors')
+            colors_mask = cats.isin(subset)
+
+            adata_sample.obs[ct_col] = np.select([adata_sample.obs[ct_col].isin(subset)], [adata_sample.obs[ct_col]], np.nan)
+            adata_sample.uns[f'{ct_col}_colors'] = colors[colors_mask]
+
+        if legend_cats is None:
+            legend_cats = list(adata_sample.obs[ct_col].cat.categories)
+            legend_colors = np.asarray(adata_sample.uns[f'{ct_col}_colors'])
+
+        ax = sq.pl.spatial_scatter(
+            adata_sample,
+            library_id="spatial",
+            shape=None,
+            color=[ct_col],
+            size=1,
+            na_color='lightgray',
+            return_ax=True,
+            ax=axes[i],
+        )
+
+        leg = ax.get_legend()
+        if leg is not None:
+            leg.remove()
+        ax.set_axis_off()
+        ax.set_title(sample_name)
+
+    for j in range(n, len(axes)):
+        fig.delaxes(axes[j])
+
+    if legend_cats:
+        handles = [
+            Patch(facecolor=c, edgecolor="none", label=str(cat))
+            for cat, c in zip(legend_cats, legend_colors)
+        ]
+        fig.legend(
+            handles=handles,
+            loc="center left",
+            bbox_to_anchor=(1.02, 0.5),
+            title=ct_col,
+            frameon=True,
+        )
+        fig.tight_layout(rect=[0, 0, 0.88, 1])
+    else:
+        fig.tight_layout()
+
     plt.show()
 
     if save:
-        fig.savefig(f'figures/spatial_plots/{sample_name}_{ct_col}_layered.png', bbox_inches="tight")
+        fig.savefig(f'figures/spatial_plots/{ct_col}_layered.png', bbox_inches="tight")
 
 
 
