@@ -14,7 +14,8 @@ def spatial_plot_cell_types_layered(
     save=False,
     figsize=None,
     n_cols=None,
-    size=1
+    size=1,
+    dpi='figure'
 ):
     sample_names = sorted(adata.obs["sample_name"].unique())
     n = len(sample_names)
@@ -91,7 +92,7 @@ def spatial_plot_cell_types_layered(
     plt.show()
 
     if save:
-        fig.savefig(f'figures/spatial_plots/{ct_col}_layered.png', bbox_inches="tight")
+        fig.savefig(f'figures/spatial_plots/{ct_col}_layered.png', bbox_inches="tight", dpi=dpi)
 
 
 
