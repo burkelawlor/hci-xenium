@@ -218,15 +218,23 @@ def feature_plots_from_marker_genes(adata, marker_genes_dict, save=False, prefix
         plt.show()
 
 
-def plot_proportions(adata, groupby, ct_col, save=False, figsize=None):
+def plot_proportions(adata, groupby, ct_col, palette=None, save=False, figsize=None, title='default'):
     proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
-    try:
-        proportions.plot.barh(stacked=True, color=adata.uns[f'{ct_col}_colors'], figsize=figsize)
-    except:
-        proportions.plot.barh(stacked=True, figsize=figsize)
+    if palette is None:
+        try:
+            proportions.plot.barh(stacked=True, figsize=figsize, color=adata.uns[f'{ct_col}_colors'],)
+        except:
+            proportions.plot.barh(stacked=True, figsize=figsize)
+    else:
+        proportions.plot.barh(stacked=True, figsize=figsize, color=palette,)
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.title(f"{ct_col} proportions by {groupby}")
-    if save:
-        plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}.png", bbox_inches="tight")
-    plt.show()
+    if title == 'default':
+        plt.title(f"{ct_col} proportions by {groupby}")
+    else:
+        plt.title(title)
     
+    if save == True:
+        plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}.png", bbox_inches="tight")
+    elif isinstance(save, str):
+        plt.savefig(f"./figures/proportions/{save}.png", bbox_inches="tight")
+    plt.show()
