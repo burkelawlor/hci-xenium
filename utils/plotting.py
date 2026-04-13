@@ -218,22 +218,44 @@ def feature_plots_from_marker_genes(adata, marker_genes_dict, save=False, prefix
         plt.show()
 
 
-def plot_proportions_bar(adata, groupby, ct_col, palette=None, save=False, figsize=None, title='default'):
-    proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
+def plot_proportions_bar(
+    adata, 
+    groupby, 
+    ct_col, 
+    palette=None, 
+    save=False, 
+    figsize=None, 
+    title='default', 
+    order=None,
+):
+    proportions = adata.obs[[groupby, ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
+
+    # Reorder the index according to 'order' if provided
+    if order is not None:
+        # Only keep values present in proportions' index
+        order = [x for x in order if x in proportions.index]
+        proportions = proportions.loc[order]
+
     if palette is None:
         try:
-            proportions.plot.barh(stacked=True, figsize=figsize, color=adata.uns[f'{ct_col}_colors'],)
-        except:
-            proportions.plot.barh(stacked=True, figsize=figsize)
+            plot_ax = proportions.plot.barh(
+                stacked=True, figsize=figsize, color=adata.uns[f'{ct_col}_colors'],
+            )
+        except Exception:
+            plot_ax = proportions.plot.barh(stacked=True, figsize=figsize)
     else:
-        proportions.plot.barh(stacked=True, figsize=figsize, color=palette,)
+        plot_ax = proportions.plot.barh(stacked=True, figsize=figsize, color=palette)
+    
+    # In matplotlib, the first index appears at the bottom of the y-axis.
+    # To put the first value of 'order' at the TOP, invert the y-axis.
+    plot_ax.invert_yaxis()
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     if title == 'default':
         plt.title(f"{ct_col} proportions by {groupby}")
     else:
         plt.title(title)
     
-    if save == True:
+    if save is True:
         plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}_bar.png", bbox_inches="tight")
     elif isinstance(save, str):
         plt.savefig(f"./figures/proportions/{save}.png", bbox_inches="tight")
