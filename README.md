@@ -4,11 +4,10 @@ Spatial transcriptomics analyses of immune-related adverse events (irAE) using X
 
 ## About
 
-Notebooks are layed out in the following order:
+Analyses can be found in `notebooks/` which are laid out in the following order:
 
-1. **01_preprocessing_qc.ipynb** — Load Xenium data, preprocessing, QC  
-2. **02a_general_annotation_all_samples.ipynb** / **02b_general_annotation_subset.ipynb** — General cell-type annotation  
-3. **03_immune_annotation.ipynb** — Immune cell annotation  
-4. **04_lymphoid_regions.ipynb** — Lymphoid region analysis  
+* **01_preprocessing_qc.ipynb** — Load Xenium data, preprocessing, QC  
+* **02x_annotation_X.ipynb** — Cell-type annotations for RMC samples (PNT1-2, EPD1-7) according to the notebook name (general, immune, endothelial, keratinocyte).  
+* **03_lymphoid_aggregates.ipynb** — Analysis of the lymphoid aggreate regions, which have been manually drawn by Dekker
 
 Shared utilities live in `utils/` (plotting, processing, cell types). Plots are written to `figures/`. Input data is expected under `data/` (not in repo).
