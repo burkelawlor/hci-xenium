@@ -37,3 +37,9 @@ def propogate_subset_labels(parent_adata, subset_adata, key_added, key_to_add, m
     adata_new.obs[key_added] = adata_new.obs[key_added].astype("category")
 
     return adata_new
+
+def get_ranked_genes_by_group(adata, key='rank_genes_groups'):
+    result = adata.uns[key]
+    groups = result['names'].dtype.names
+    genes_ranked = {group:[x[i] for x in result['names']] for i,group in enumerate(groups)}
+    return genes_ranked
