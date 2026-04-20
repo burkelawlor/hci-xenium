@@ -16,6 +16,7 @@ __pycache__/
 
 # Project specific directories
 data/
+figures/
 tutorials/
 notebooks/examples/
 notebooks/archived/
