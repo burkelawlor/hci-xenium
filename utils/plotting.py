@@ -11,13 +11,17 @@ def spatial_plot_cell_types_layered(
     adata,
     ct_col,
     subset=False,
+    samples=None,
     save=False,
     figsize=None,
     n_cols=None,
     size=1,
     dpi='figure'
 ):
-    sample_names = sorted(adata.obs["sample_name"].unique())
+    if samples is not None:
+        sample_names = sorted(s for s in samples if s in adata.obs["sample_name"].values)
+    else:
+        sample_names = sorted(adata.obs["sample_name"].unique())
     n = len(sample_names)
     if n == 0:
         return
@@ -31,8 +35,15 @@ def spatial_plot_cell_types_layered(
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
     axes = np.ravel(np.atleast_1d(axes))
 
-    legend_cats = None
-    legend_colors = None
+    all_cats = list(adata.obs[ct_col].cat.categories)
+    all_colors = np.asarray(adata.uns[f'{ct_col}_colors'])
+    if subset:
+        mask = np.isin(all_cats, subset)
+        legend_cats = [c for c, m in zip(all_cats, mask) if m]
+        legend_colors = all_colors[mask]
+    else:
+        legend_cats = all_cats
+        legend_colors = all_colors
 
     for i, sample_name in enumerate(sample_names):
         adata_sample = adata[adata.obs["sample_name"] == sample_name].copy()
@@ -44,10 +55,6 @@ def spatial_plot_cell_types_layered(
 
             adata_sample.obs[ct_col] = np.select([adata_sample.obs[ct_col].isin(subset)], [adata_sample.obs[ct_col]], np.nan)
             adata_sample.uns[f'{ct_col}_colors'] = colors[colors_mask]
-
-        if legend_cats is None:
-            legend_cats = list(adata_sample.obs[ct_col].cat.categories)
-            legend_colors = np.asarray(adata_sample.uns[f'{ct_col}_colors'])
 
         # Sort so that NA cells are on top and plotted first (to be on the bottom)
         adata_sorted = ad.concat([adata_sample[adata_sample.obs[ct_col].isna()], adata_sample[adata_sample.obs[ct_col].notna()]], uns_merge='first')
