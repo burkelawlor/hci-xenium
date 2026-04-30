@@ -21,7 +21,7 @@ CLAUDE.md
 # Project specific directories
 data/
 # figures/
-output/
+# output/
 tutorials/
 notebooks/examples/
 notebooks/archived/
