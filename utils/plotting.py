@@ -268,9 +268,9 @@ def plot_proportions_bar(
     
     
     if not legend_bbox:
-        plt.legend(bbox_to_anchor=(1.05,1), loc='upper left')
+        plt.legend(bbox_to_anchor=(1.05,0.5), loc='center left')
     else:
-        plt.legend(bbox_to_anchor=legend_bbox, loc='upper left')
+        plt.legend(bbox_to_anchor=legend_bbox, loc='center left')
     
     if title == 'default':
         plt.title(f"{ct_col} proportions by {groupby}")
@@ -298,18 +298,25 @@ def plot_proportions_bar(
             total_values = [fmt.format(v) for v in computed]
 
         trans = blended_transform_factory(plot_ax.transAxes, plot_ax.transData)
+        val_texts = []
         for i, val in enumerate(total_values):
-            plot_ax.text(
+            val_texts.append(plot_ax.text(
                 1.02, i, val,
                 transform=trans, va='center', ha='left',
                 fontsize=plt.rcParams.get('ytick.labelsize', 'medium'),
-            )
-        plot_ax.text(1.02, 1.0, display_totals_title, transform=plot_ax.transAxes, va='bottom', ha='left',)
+            ))
+
+        # Position title just past the rightmost edge of the value labels
+        plot_ax.figure.canvas.draw()
+        renderer = plot_ax.figure.canvas.get_renderer()
+        max_x_disp = max(t.get_window_extent(renderer).x1 for t in val_texts)
+        max_x_ax = plot_ax.transAxes.inverted().transform((max_x_disp, 0))[0]
+        plot_ax.text(max_x_ax + 0.04, 0.5, display_totals_title, transform=plot_ax.transAxes, va='center', ha='center', rotation=-90)
         
         if not legend_bbox:
-            plt.legend(bbox_to_anchor=(1.15, 1), loc='upper left')
+            plt.legend(bbox_to_anchor=(max_x_ax + 0.1, 0.5), loc='center left')
         else:
-            plt.legend(bbox_to_anchor=legend_bbox, loc='upper left')
+            plt.legend(bbox_to_anchor=legend_bbox, loc='center left')
 
     if save is True:
         plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}_bar.png", bbox_inches="tight")
