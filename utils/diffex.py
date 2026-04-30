@@ -150,7 +150,7 @@ def run_diffex(adata, sample_col, celltype_col, condition_col, contrast,
 
 
 def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_labels=10,
-                 figsize=(7, 6)):
+                 figsize=(7, 6), ax=None):
     """
     Volcano plot for a single cell type's DESeq2 results.
 
@@ -165,8 +165,9 @@ def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_l
     Returns:
         matplotlib Figure
     """
-    df = results_df.dropna(subset=['padj', 'log2FoldChange', 'pvalue']).copy()
-    df['neg_log10_p'] = -np.log10(df['pvalue'].clip(lower=1e-300))
+    df = results_df.dropna(subset=['padj', 'log2FoldChange']).copy()
+    df = df[df['padj'] > 0].copy()
+    df['neg_log10_p'] = -np.log10(df['padj'].clip(lower=1e-300))
 
     sig_up = (df['padj'] < padj_thresh) & (df['log2FoldChange'] > lfc_thresh)
     sig_dn = (df['padj'] < padj_thresh) & (df['log2FoldChange'] < -lfc_thresh)
@@ -178,7 +179,10 @@ def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_l
         'ns': '#aaaaaa',
     }
 
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
 
     ax.scatter(df.loc[ns, 'log2FoldChange'], df.loc[ns, 'neg_log10_p'],
                color=colors['ns'], s=8, alpha=0.5, linewidths=0, label='NS')
@@ -205,7 +209,7 @@ def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_l
         adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle='-', color='gray', lw=0.5))
 
     ax.set_xlabel('log$_2$ Fold Change', fontsize=12)
-    ax.set_ylabel('-log$_{10}$(p-value)', fontsize=12)
+    ax.set_ylabel('-log$_{10}$(adjusted p-value)', fontsize=12)
     ax.set_title(title, fontsize=13)
     ax.legend(fontsize=9, framealpha=0.7)
     fig.tight_layout()
