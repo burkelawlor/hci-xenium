@@ -14,9 +14,16 @@ __pycache__/
 # OS
 .DS_Store
 
+# Claude
+.claude/
+CLAUDE.md
+
 # Project specific directories
 data/
+# figures/
+output/
 tutorials/
 notebooks/examples/
 notebooks/archived/
 xenium_5001.txt
+figures/plasma_cell_for_eric/*

@@ -1,6 +1,7 @@
 import math
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
+from matplotlib.transforms import blended_transform_factory
 import matplotlib.pyplot as plt
 import numpy as np
 import squidpy as sq
@@ -11,13 +12,17 @@ def spatial_plot_cell_types_layered(
     adata,
     ct_col,
     subset=False,
+    samples=None,
     save=False,
     figsize=None,
     n_cols=None,
     size=1,
     dpi='figure'
 ):
-    sample_names = sorted(adata.obs["sample_name"].unique())
+    if samples is not None:
+        sample_names = sorted(s for s in samples if s in adata.obs["sample_name"].values)
+    else:
+        sample_names = sorted(adata.obs["sample_name"].unique())
     n = len(sample_names)
     if n == 0:
         return
@@ -31,8 +36,15 @@ def spatial_plot_cell_types_layered(
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
     axes = np.ravel(np.atleast_1d(axes))
 
-    legend_cats = None
-    legend_colors = None
+    all_cats = list(adata.obs[ct_col].cat.categories)
+    all_colors = np.asarray(adata.uns[f'{ct_col}_colors'])
+    if subset:
+        mask = np.isin(all_cats, subset)
+        legend_cats = [c for c, m in zip(all_cats, mask) if m]
+        legend_colors = all_colors[mask]
+    else:
+        legend_cats = all_cats
+        legend_colors = all_colors
 
     for i, sample_name in enumerate(sample_names):
         adata_sample = adata[adata.obs["sample_name"] == sample_name].copy()
@@ -44,10 +56,6 @@ def spatial_plot_cell_types_layered(
 
             adata_sample.obs[ct_col] = np.select([adata_sample.obs[ct_col].isin(subset)], [adata_sample.obs[ct_col]], np.nan)
             adata_sample.uns[f'{ct_col}_colors'] = colors[colors_mask]
-
-        if legend_cats is None:
-            legend_cats = list(adata_sample.obs[ct_col].cat.categories)
-            legend_colors = np.asarray(adata_sample.uns[f'{ct_col}_colors'])
 
         # Sort so that NA cells are on top and plotted first (to be on the bottom)
         adata_sorted = ad.concat([adata_sample[adata_sample.obs[ct_col].isna()], adata_sample[adata_sample.obs[ct_col].notna()]], uns_merge='first')
@@ -218,26 +226,106 @@ def feature_plots_from_marker_genes(adata, marker_genes_dict, save=False, prefix
         plt.show()
 
 
-def plot_proportions_bar(adata, groupby, ct_col, palette=None, save=False, figsize=None, title='default'):
-    proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
+def plot_proportions_bar(
+    adata, 
+    groupby, 
+    ct_col, 
+    palette=None, 
+    save=False, 
+    figsize=None, 
+    title='default', 
+    order=None,
+    normalize=True,
+    display_totals=False,
+    display_totals_title='Total count',
+    legend_bbox=None,
+    return_proportions=False,
+    ylabel=None,
+):
+    counts = adata.obs[[groupby, ct_col]].groupby(groupby, observed=True).value_counts(normalize=False).unstack()
+    proportions = adata.obs[[groupby, ct_col]].groupby(groupby, observed=True).value_counts(normalize=normalize).unstack()
+    
+
+    # Reorder the index according to 'order' if provided
+    if order is not None:
+        # Only keep values present in proportions' index
+        order = [x for x in order if x in proportions.index]
+        proportions = proportions.loc[order]
+    else: 
+        order = proportions.index
+
     if palette is None:
         try:
-            proportions.plot.barh(stacked=True, figsize=figsize, color=adata.uns[f'{ct_col}_colors'],)
-        except:
-            proportions.plot.barh(stacked=True, figsize=figsize)
+            plot_ax = proportions.plot.barh(stacked=True, figsize=figsize, color=adata.uns[f'{ct_col}_colors'])
+        except Exception:
+            plot_ax = proportions.plot.barh(stacked=True, figsize=figsize)
     else:
-        proportions.plot.barh(stacked=True, figsize=figsize, color=palette,)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plot_ax = proportions.plot.barh(stacked=True, figsize=figsize, color=palette)
+    
+    # In matplotlib, the first index appears at the bottom of the y-axis.
+    # To put the first value of 'order' at the TOP, invert the y-axis.
+    plot_ax.invert_yaxis()
+    
+    
+    if not legend_bbox:
+        plt.legend(bbox_to_anchor=(1.05,0.5), loc='center left')
+    else:
+        plt.legend(bbox_to_anchor=legend_bbox, loc='center left')
+    
     if title == 'default':
         plt.title(f"{ct_col} proportions by {groupby}")
     else:
         plt.title(title)
+
+    if normalize:
+        plt.xlabel('Proportion')
+    else:
+        plt.xlabel('Count')
+
+    if isinstance(ylabel, str):
+        plt.ylabel(ylabel)
+    elif ylabel is None:
+        plt.ylabel(None)
     
-    if save == True:
+    if display_totals is not False:
+        if isinstance(display_totals, dict):
+            total_values = [str(display_totals[group]) for group in order]
+        elif isinstance(display_totals, list):
+            total_values = [str(v) for v in display_totals]
+        else:
+            computed = counts.sum(axis=1)[order]
+            fmt = '{:,.0f}' if computed.dtype == 'int64' else '{:.3f}'
+            total_values = [fmt.format(v) for v in computed]
+
+        trans = blended_transform_factory(plot_ax.transAxes, plot_ax.transData)
+        val_texts = []
+        for i, val in enumerate(total_values):
+            val_texts.append(plot_ax.text(
+                1.02, i, val,
+                transform=trans, va='center', ha='left',
+                fontsize=plt.rcParams.get('ytick.labelsize', 'medium'),
+            ))
+
+        # Position title just past the rightmost edge of the value labels
+        plot_ax.figure.canvas.draw()
+        renderer = plot_ax.figure.canvas.get_renderer()
+        max_x_disp = max(t.get_window_extent(renderer).x1 for t in val_texts)
+        max_x_ax = plot_ax.transAxes.inverted().transform((max_x_disp, 0))[0]
+        plot_ax.text(max_x_ax + 0.04, 0.5, display_totals_title, transform=plot_ax.transAxes, va='center', ha='center', rotation=-90)
+        
+        if not legend_bbox:
+            plt.legend(bbox_to_anchor=(max_x_ax + 0.1, 0.5), loc='center left')
+        else:
+            plt.legend(bbox_to_anchor=legend_bbox, loc='center left')
+
+    if save is True:
         plt.savefig(f"./figures/proportions/{ct_col}_by_{groupby}_bar.png", bbox_inches="tight")
     elif isinstance(save, str):
         plt.savefig(f"./figures/proportions/{save}.png", bbox_inches="tight")
     plt.show()
+
+    if return_proportions:
+        return proportions
 
 
 def plot_proportions_line(adata, groupby, ct_col, order=None, palette=None, save=False, figsize=None, title='default'):

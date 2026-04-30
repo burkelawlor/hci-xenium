@@ -37,3 +37,30 @@ def propogate_subset_labels(parent_adata, subset_adata, key_added, key_to_add, m
     adata_new.obs[key_added] = adata_new.obs[key_added].astype("category")
 
     return adata_new
+
+
+
+def get_ranked_genes_by_group(adata, key='rank_genes_groups'):
+    result = adata.uns[key]
+    groups = result['names'].dtype.names
+    genes_ranked = {group:[x[i] for x in result['names']] for i,group in enumerate(groups)}
+    return genes_ranked
+
+
+from scipy.stats import median_abs_deviation
+def flag_outliers_by_mad(adata, column, upper_mad=5, lower_mad=5):
+    values = adata.obs[column].values
+    med = np.median(values)
+    mad_val = median_abs_deviation(values)
+    
+    if upper_mad != 0:
+        high_cut = med + upper_mad * mad_val
+    else: high_cut = max(values)
+
+    if lower_mad != 0:
+        low_cut  = med - lower_mad * mad_val
+    else: low_cut = min(values)
+    
+    column_name = column + "_outlier"
+    adata.obs[column_name] = (values > high_cut) | (values < low_cut)
+    return adata
