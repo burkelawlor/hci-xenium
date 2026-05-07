@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 import scipy.sparse
@@ -149,8 +150,31 @@ def run_diffex(adata, sample_col, celltype_col, condition_col, contrast,
     )
 
 
+def summarize_sig_by_gene(results_df):
+    """
+    Summarize significant DE results per gene across cell types.
+
+    Args:
+        results_df: combined results DataFrame with columns 'gene', 'ct', 'sig', 'direction'
+
+    Returns:
+        DataFrame indexed by gene with columns: sig, sig_cell_types, n_up, n_down
+    """
+    sig_by_gene = results_df.groupby('gene').agg({'sig': 'sum'}).sort_values('sig', ascending=False)
+    _sig = results_df[results_df['sig']]
+    _dir_counts = (
+        _sig.groupby(['gene', 'direction']).size()
+        .unstack(fill_value=0)
+        .reindex(columns=['up', 'down'], fill_value=0)
+    )
+    sig_by_gene['n_up'] = _dir_counts['up'].reindex(sig_by_gene.index, fill_value=0).astype(int)
+    sig_by_gene['n_down'] = _dir_counts['down'].reindex(sig_by_gene.index, fill_value=0).astype(int)
+    sig_by_gene['sig_cell_types'] = _sig.groupby('gene')['ct'].apply(lambda x: x.unique().tolist())
+    return sig_by_gene
+
+
 def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_labels=10,
-                 figsize=(7, 6), ax=None):
+                 labels=False, figsize=(7, 6), ax=None):
     """
     Volcano plot for a single cell type's DESeq2 results.
 
@@ -160,6 +184,7 @@ def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_l
         padj_thresh: adjusted p-value threshold for significance
         lfc_thresh: absolute log2 fold-change threshold for up/down coloring
         top_n_labels: number of top significant genes (by padj) to label
+        labels: list of gene names to label in addition to top_n_labels genes
         figsize: figure size tuple
 
     Returns:
@@ -200,10 +225,14 @@ def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_l
 
     # Label top significant genes
     sig_genes = df[sig_up | sig_dn].nsmallest(top_n_labels, 'padj')
+    label_genes = pd.concat([
+        sig_genes,
+        df[df['gene'].isin(labels)] if labels is not False else pd.DataFrame()
+    ]).drop_duplicates(subset='gene')
     texts = [
         ax.text(row['log2FoldChange'], row['neg_log10_p'], row['gene'],
                 fontsize=7, ha='center', va='bottom')
-        for _, row in sig_genes.iterrows()
+        for _, row in label_genes.iterrows()
     ]
     if texts:
         adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle='-', color='gray', lw=0.5))
@@ -215,3 +244,149 @@ def plot_volcano(results_df, title='', padj_thresh=0.05, lfc_thresh=1.0, top_n_l
     fig.tight_layout()
 
     return fig
+
+
+class DiffExAnalysis:
+    """
+    Pseudobulk + PyDESeq2 differential expression analysis for a single contrast.
+
+    Usage:
+        analysis = DiffExAnalysis(adata, sample_col, celltype_col, condition_col, contrast)
+        results_df = analysis.run(padj_thresh=0.05, lfc_thresh=1.0)
+        sig_by_gene = analysis.summarize_sig_by_gene(subset_cts=immune_cts)
+        fig = analysis.plot_volcano(subset_cts=immune_cts, ncols=4)
+    """
+
+    def __init__(
+        self,
+        adata,
+        sample_col: str,
+        celltype_col: str,
+        condition_col: str,
+        contrast: tuple,
+        *,
+        design_formula: str | None = None,
+        min_cells: int = 20,
+        min_pseudobulk_samples: int = 4,
+        counts_layer: str = 'raw_counts',
+    ):
+        self.adata = adata
+        self.sample_col = sample_col
+        self.celltype_col = celltype_col
+        self.condition_col = condition_col
+        self.contrast = contrast
+        self.design_formula = design_formula
+        self.min_cells = min_cells
+        self.min_pseudobulk_samples = min_pseudobulk_samples
+        self.counts_layer = counts_layer
+        self.results_df = None
+        self._padj_thresh = None
+        self._lfc_thresh = None
+
+    def run(self, padj_thresh: float = 0.05, lfc_thresh: float = 1.0) -> pd.DataFrame:
+        """
+        Run pseudobulk + DESeq2 per cell type and assemble results_df.
+
+        Stores results on self.results_df and returns it.
+        """
+        raw = run_diffex(
+            self.adata,
+            sample_col=self.sample_col,
+            celltype_col=self.celltype_col,
+            condition_col=self.condition_col,
+            contrast=self.contrast,
+            design_formula=self.design_formula,
+            min_cells=self.min_cells,
+            min_pseudobulk_samples=self.min_pseudobulk_samples,
+            counts_layer=self.counts_layer,
+        )
+
+        df_list = []
+        for ct, df in raw.items():
+            df_ct = df.copy()
+            df_ct.insert(0, 'ct', ct)
+            df_list.append(df_ct)
+
+        results_df = pd.concat(df_list, ignore_index=True)
+        lfc = results_df['log2FoldChange']
+        results_df['sig'] = (
+            (results_df['padj'] < padj_thresh) &
+            ((lfc > lfc_thresh) | (lfc < -lfc_thresh))
+        )
+        results_df['direction'] = np.where(lfc > 0, 'up', 'down')
+
+        self.results_df = results_df
+        self._padj_thresh = padj_thresh
+        self._lfc_thresh = lfc_thresh
+        return results_df
+
+    def _check_run(self, method_name: str):
+        if self.results_df is None:
+            raise RuntimeError(f"Call run() before {method_name}()")
+
+    def summarize_sig_by_gene(self, subset_cts: list | None = None) -> pd.DataFrame:
+        """
+        Summarize significant DE results per gene. Optionally restrict to subset_cts.
+        """
+        self._check_run('summarize_sig_by_gene')
+        df = self.results_df
+        if subset_cts is not None:
+            df = df[df['ct'].isin(subset_cts)]
+        return summarize_sig_by_gene(df)
+
+    def plot_volcano(
+        self,
+        celltype: str | None = None,
+        subset_cts: list | None = None,
+        *,
+        padj_thresh: float | None = None,
+        lfc_thresh: float | None = None,
+        top_n_labels: int = 10,
+        labels: list | bool = False,
+        ncols: int = 4,
+        subplot_size: tuple = (5, 4),
+        title: str | None = None,
+    ):
+        """
+        Volcano plot(s). Single cell type if celltype is given, otherwise a grid.
+
+        subset_cts filters which cell types appear in the grid (ignored if celltype is set).
+        """
+        self._check_run('plot_volcano')
+        padj_thresh = padj_thresh if padj_thresh is not None else self._padj_thresh
+        lfc_thresh = lfc_thresh if lfc_thresh is not None else self._lfc_thresh
+
+        if celltype is not None:
+            ct_df = self.results_df[self.results_df['ct'] == celltype]
+            fig, ax = plt.subplots(figsize=subplot_size)
+            plot_volcano(
+                ct_df, title=title or celltype,
+                padj_thresh=padj_thresh, lfc_thresh=lfc_thresh,
+                top_n_labels=top_n_labels, labels=labels,
+                figsize=subplot_size, ax=ax,
+            )
+            return fig
+
+        df = self.results_df
+        if subset_cts is not None:
+            df = df[df['ct'].isin(subset_cts)]
+        cts = df['ct'].unique().tolist()
+        n = len(cts)
+        nrows = math.ceil(n / ncols)
+        fig, axes = plt.subplots(nrows, ncols, figsize=(subplot_size[0] * ncols, subplot_size[1] * nrows))
+        axes = axes.flatten() if n > 1 else [axes]
+
+        for i, ct in enumerate(cts):
+            ct_df = df[df['ct'] == ct]
+            plot_volcano(
+                ct_df, title=ct,
+                padj_thresh=padj_thresh, lfc_thresh=lfc_thresh,
+                top_n_labels=top_n_labels, labels=labels,
+                figsize=subplot_size, ax=axes[i],
+            )
+
+        for j in range(i + 1, len(axes)):
+            axes[j].set_visible(False)
+
+        fig.tight_layout()
+        return fig
