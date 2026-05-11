@@ -64,7 +64,18 @@ xenium_paths = {
     'OLP6':  batch_3_root / 'output-XETG00516__0076660__Region_2__20260506__200317',
 }
 
-
+sample_sets = {
+    'NL': ['NS1', 'NS2', 'NS3', 'NS4'],
+    'RMC_EPD': ['EPD1', 'EPD2', 'EPD3', 'EPD4', 'EPD5', 'EPD6', 'EPD7'],
+    'NL_EPD': ['EPD8', 'EPD9', 'EPD10'],
+    'PNT': ['PNT1', 'PNT2'],
+    'LP': ['LP1', 'LP2', 'LP3'],
+    'LPP': ['LPP1', 'LPP2', 'LPP3', 'LPP4'],
+    'OLP': ['OLP1', 'OLP2', 'OLP3', 'OLP4', 'OLP5', 'OLP6'],
+    'MAST': ['MAST1', 'MAST2', 'MAST3','MAST4', 'MAST5', 'MAST6'],
+    'SCLE': ['SCLE1', 'SCLE2', 'SCLE3', 'SCLE4', 'SCLE5'],
+    'TC': ['TC1'],
+}
 
 ### Functions for loading Xenium data
 
@@ -81,7 +92,7 @@ def load_adata_from_xenium(sample_name):
     adata = sdata.tables['table']
     adata.obs['cell_id_unique'] = sample_name + '_' + adata.obs['cell_id']
     adata.obs['sample_name'] = sample_name
-    adata.obs['sample_set'] = re.sub(r'[^a-zA-Z]', '', sample_name)
+    adata.obs['sample_set'] = next(k for k, v in sample_sets.items() if sample_name in v)
     adata.obs['batch'] = 'batch_1' if sample_name in batch_1 else 'batch_2' if sample_name in batch_2 else 'batch_3' if sample_name in batch_3 else None
     
     return adata
