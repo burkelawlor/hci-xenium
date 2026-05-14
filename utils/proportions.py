@@ -1,7 +1,11 @@
+import itertools
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.transforms import blended_transform_factory
+from scipy import stats
+from statsmodels.stats.multitest import multipletests
 
 
 def plot_proportions_bar(
@@ -106,6 +110,97 @@ def plot_proportions_bar(
         return proportions
 
 
+def _per_sample_proportions(adata, ct_col, cell_type, groupby, sample_name_col):
+    obs = adata.obs[[ct_col, groupby, sample_name_col]].copy()
+    per_sample = (
+        obs.groupby(sample_name_col, observed=True)
+        .apply(lambda df: (df[ct_col] == cell_type).sum() / len(df), include_groups=False)
+        .rename('proportion')
+    )
+    sample_to_group = obs.drop_duplicates(sample_name_col).set_index(sample_name_col)[groupby]
+    return pd.DataFrame({'proportion': per_sample, 'group': sample_to_group})
+
+
+def test_proportion_differences(
+    adata,
+    ct_col,
+    cell_type,
+    groupby,
+    sample_name_col='sample_name',
+    order=None,
+    correction='fdr_bh',
+):
+    per_sample_df = _per_sample_proportions(adata, ct_col, cell_type, groupby, sample_name_col)
+
+    groups = order if order is not None else list(per_sample_df['group'].unique())
+    groups = [g for g in groups if g in per_sample_df['group'].values]
+    group_vals = [per_sample_df[per_sample_df['group'] == g]['proportion'].values for g in groups]
+
+    kruskal_stat, kruskal_p = stats.kruskal(*group_vals)
+
+    pairs = list(itertools.combinations(groups, 2))
+    raw_pvals = [
+        stats.mannwhitneyu(
+            per_sample_df[per_sample_df['group'] == a]['proportion'].values,
+            per_sample_df[per_sample_df['group'] == b]['proportion'].values,
+            alternative='two-sided',
+        ).pvalue
+        for a, b in pairs
+    ]
+    _, adj_pvals, _, _ = multipletests(raw_pvals, method=correction)
+
+    pairwise = pd.DataFrame(np.nan, index=groups, columns=groups)
+    for (a, b), p in zip(pairs, adj_pvals):
+        pairwise.loc[a, b] = p
+        pairwise.loc[b, a] = p
+
+    return {
+        'kruskal_stat': kruskal_stat,
+        'kruskal_p': kruskal_p,
+        'pairwise': pairwise,
+        '_pairs': pairs,
+        '_adj_pvals': list(adj_pvals),
+    }
+
+
+def _draw_significance_brackets(ax, groups, stats_result, means, errs, per_sample_df):
+    def _stars(p):
+        if p < 0.001: return '***'
+        if p < 0.01: return '**'
+        if p < 0.05: return '*'
+        return None
+
+    pairs = stats_result['_pairs']
+    adj_pvals = stats_result['_adj_pvals']
+
+    sig_pairs = [(pair, p) for pair, p in zip(pairs, adj_pvals) if _stars(p) is not None]
+    if not sig_pairs:
+        return
+
+    # Sort by span so shorter (inner) brackets are drawn first
+    sig_pairs.sort(key=lambda x: abs(groups.index(x[0][1]) - groups.index(x[0][0])))
+
+    # Start all brackets above the tallest element anywhere in the plot
+    y_max = max(
+        max(means[g] + errs[g] for g in groups),
+        per_sample_df['proportion'].max(),
+    )
+    heights = {i: y_max for i in range(len(groups))}
+    step = y_max * 0.12
+
+    n_sig = len(sig_pairs)
+    ax.set_ylim(top=y_max + step * (n_sig + 2))
+
+    for (g1, g2), p in sig_pairs:
+        i1, i2 = groups.index(g1), groups.index(g2)
+        y = max(heights[i1], heights[i2]) + step
+        ax.plot([i1, i1, i2, i2], [heights[i1] + step * 0.3, y, y, heights[i2] + step * 0.3],
+                lw=1, c='black')
+        ax.text((i1 + i2) / 2, y + step * 0.05, _stars(p), ha='center', va='bottom', fontsize=10)
+        for i in range(min(i1, i2), max(i1, i2) + 1):
+            heights[i] = y
+
+
 def plot_proportion_scatter_bar(
     adata,
     ct_col,
@@ -115,19 +210,12 @@ def plot_proportion_scatter_bar(
     order=None,
     error='sem',
     color=None,
+    stats=None,
     figsize=None,
     title='default',
     save=False,
 ):
-    obs = adata.obs[[ct_col, groupby, sample_name_col]].copy()
-
-    per_sample = (
-        obs.groupby(sample_name_col, observed=True)
-        .apply(lambda df: (df[ct_col] == cell_type).sum() / len(df), include_groups=False)
-        .rename('proportion')
-    )
-    sample_to_group = obs.drop_duplicates(sample_name_col).set_index(sample_name_col)[groupby]
-    per_sample_df = pd.DataFrame({'proportion': per_sample, 'group': sample_to_group})
+    per_sample_df = _per_sample_proportions(adata, ct_col, cell_type, groupby, sample_name_col)
 
     groups = order if order is not None else list(per_sample_df['group'].unique())
     groups = [g for g in groups if g in per_sample_df['group'].values]
@@ -140,8 +228,8 @@ def plot_proportion_scatter_bar(
 
     if color is None:
         try:
-            categories = list(adata.obs[groupby].cat.categories)
-            colors = adata.uns[f'{groupby}_colors']
+            categories = list(adata.obs[ct_col].cat.categories)
+            colors = adata.uns[f'{ct_col}_colors']
             color = colors[categories.index(cell_type)]
         except Exception:
             color = 'steelblue'
@@ -167,6 +255,9 @@ def plot_proportion_scatter_bar(
         ax.set_title(f'Proportion of {cell_type} by {groupby}')
     else:
         ax.set_title(title)
+
+    if stats is not None:
+        _draw_significance_brackets(ax, groups, stats, means, errs, per_sample_df)
 
     plt.tight_layout()
 
