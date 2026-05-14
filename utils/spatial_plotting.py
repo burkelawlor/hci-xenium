@@ -205,22 +205,3 @@ def spatial_plot_cell_types_individual(
     if save:
         fig.savefig(f"figures/spatial_plots/{sample_name}_{ct_col}_individual.png", bbox_inches="tight")
 
-
-
-
-
-def feature_plots_from_marker_genes(adata, marker_genes_dict, save=False, prefix=None):
-    
-    for ct in marker_genes_dict:
-        print(f'{ct.upper()}:')
-        
-        ax = sc.pl.umap(adata, color=marker_genes_dict[ct], wspace=0.1, show=False)
-        plt.suptitle(ct)
-        
-        if save:
-            if isinstance(ax, list):
-                ax[0].figure.savefig(f"./figures/feature_plots/{prefix}_umap_{ct}.png", bbox_inches="tight")
-            else:
-                ax.figure.savefig(f"./figures/feature_plots/{prefix}_umap_{ct}.png", bbox_inches="tight")
-
-        plt.show()

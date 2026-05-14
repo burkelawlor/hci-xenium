@@ -1,2 +1,3 @@
 from utils.proportions import plot_proportions_bar, plot_proportions_line, plot_proportion_scatter_bar
-from utils.spatial_plotting import spatial_plot_cell_types_layered, spatial_plot_cell_types_individual, feature_plots_from_marker_genes
+from utils.spatial_plotting import spatial_plot_cell_types_layered, spatial_plot_cell_types_individual
+from utils.processing import feature_plots_from_marker_genes
