@@ -104,7 +104,77 @@ def plot_proportions_bar(
 
     if return_proportions:
         return proportions
-        
+
+
+def plot_proportion_scatter_bar(
+    adata,
+    ct_col,
+    cell_type,
+    groupby,
+    sample_name_col='sample_name',
+    order=None,
+    error='std',
+    color=None,
+    figsize=None,
+    title='default',
+    save=False,
+):
+    obs = adata.obs[[ct_col, groupby, sample_name_col]].copy()
+
+    per_sample = (
+        obs.groupby(sample_name_col, observed=True)
+        .apply(lambda df: (df[ct_col] == cell_type).sum() / len(df), include_groups=False)
+        .rename('proportion')
+    )
+    sample_to_group = obs.drop_duplicates(sample_name_col).set_index(sample_name_col)[groupby]
+    per_sample_df = pd.DataFrame({'proportion': per_sample, 'group': sample_to_group})
+
+    groups = order if order is not None else list(per_sample_df['group'].unique())
+    groups = [g for g in groups if g in per_sample_df['group'].values]
+
+    means = per_sample_df.groupby('group', observed=True)['proportion'].mean()
+    if error == 'sem':
+        errs = per_sample_df.groupby('group', observed=True)['proportion'].sem()
+    else:
+        errs = per_sample_df.groupby('group', observed=True)['proportion'].std()
+
+    if color is None:
+        try:
+            categories = list(adata.obs[groupby].cat.categories)
+            colors = adata.uns[f'{groupby}_colors']
+            color = colors[categories.index(cell_type)]
+        except Exception:
+            color = 'steelblue'
+
+    fig, ax = plt.subplots(figsize=figsize)
+    x_pos = range(len(groups))
+
+    ax.bar(x_pos, [means[g] for g in groups], yerr=[errs[g] for g in groups],
+           color=color, alpha=0.7, capsize=4, error_kw={'linewidth': 1.5})
+
+    rng = np.random.default_rng(0)
+    for i, g in enumerate(groups):
+        vals = per_sample_df[per_sample_df['group'] == g]['proportion'].values
+        jitter = rng.uniform(-0.12, 0.12, size=len(vals))
+        ax.scatter(i + jitter, vals, color='black', s=25, zorder=3, linewidths=0)
+
+    ax.set_xticks(list(x_pos))
+    ax.set_xticklabels(groups)
+    ax.set_ylabel('Proportion')
+    ax.set_xlabel(groupby)
+
+    if title == 'default':
+        ax.set_title(f'Proportion of {cell_type} by {groupby}')
+    else:
+        ax.set_title(title)
+
+    plt.tight_layout()
+
+    if save is True:
+        plt.savefig(f'./figures/proportions/{cell_type}_proportion_by_{groupby}.png', bbox_inches='tight')
+    elif isinstance(save, str):
+        plt.savefig(f'./figures/proportions/{save}.png', bbox_inches='tight')
+    plt.show()
 
 
 def plot_proportions_line(adata, groupby, ct_col, order=None, palette=None, save=False, figsize=None, title='default'):
