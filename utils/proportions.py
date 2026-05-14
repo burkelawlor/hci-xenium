@@ -113,7 +113,7 @@ def plot_proportion_scatter_bar(
     groupby,
     sample_name_col='sample_name',
     order=None,
-    error='std',
+    error='sem',
     color=None,
     figsize=None,
     title='default',
@@ -133,10 +133,10 @@ def plot_proportion_scatter_bar(
     groups = [g for g in groups if g in per_sample_df['group'].values]
 
     means = per_sample_df.groupby('group', observed=True)['proportion'].mean()
-    if error == 'sem':
-        errs = per_sample_df.groupby('group', observed=True)['proportion'].sem()
-    else:
+    if error == 'std':
         errs = per_sample_df.groupby('group', observed=True)['proportion'].std()
+    else:
+        errs = per_sample_df.groupby('group', observed=True)['proportion'].sem()
 
     if color is None:
         try:
