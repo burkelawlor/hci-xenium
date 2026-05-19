@@ -214,6 +214,7 @@ def plot_proportion_scatter_bar(
     figsize=None,
     title='default',
     save=False,
+    ax=None,
 ):
     per_sample_df = _per_sample_proportions(adata, ct_col, cell_type, groupby, sample_name_col)
 
@@ -234,7 +235,8 @@ def plot_proportion_scatter_bar(
         except Exception:
             color = 'steelblue'
 
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
     x_pos = range(len(groups))
 
     ax.bar(x_pos, [means[g] for g in groups], yerr=[errs[g] for g in groups],
@@ -259,13 +261,16 @@ def plot_proportion_scatter_bar(
     if stats is not None:
         _draw_significance_brackets(ax, groups, stats, means, errs, per_sample_df)
 
-    plt.tight_layout()
+    if ax is None:
+        plt.tight_layout()
 
-    if save is True:
-        plt.savefig(f'./figures/proportions/{cell_type}_proportion_by_{groupby}.png', bbox_inches='tight')
-    elif isinstance(save, str):
-        plt.savefig(f'./figures/proportions/{save}.png', bbox_inches='tight')
-    plt.show()
+        if save is True:
+            plt.savefig(f'./figures/proportions/{cell_type}_proportion_by_{groupby}.png', bbox_inches='tight')
+        elif isinstance(save, str):
+            plt.savefig(f'./figures/proportions/{save}.png', bbox_inches='tight')
+        plt.show()
+    
+    return ax
 
 
 def plot_proportions_line(adata, groupby, ct_col, order=None, palette=None, save=False, figsize=None, title='default'):
