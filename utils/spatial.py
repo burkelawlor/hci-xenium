@@ -4,6 +4,7 @@ from matplotlib.patches import Patch
 from matplotlib.transforms import blended_transform_factory
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import squidpy as sq
 import scanpy as sc
 import anndata as ad
@@ -53,21 +54,25 @@ def spatial_plot_cell_types_layered(
             cats = adata_sample.obs[ct_col].cat.categories
             colors = adata_sample.uns.pop(f'{ct_col}_colors')
             colors_mask = cats.isin(subset)
-
-            adata_sample.obs[ct_col] = np.select([adata_sample.obs[ct_col].isin(subset)], [adata_sample.obs[ct_col]], np.nan)
+            adata_sample.obs[ct_col] = pd.Categorical(
+                adata_sample.obs[ct_col].where(adata_sample.obs[ct_col].isin(subset)),
+                categories=cats[colors_mask]
+            )
             adata_sample.uns[f'{ct_col}_colors'] = colors[colors_mask]
 
-        # Sort so that NA cells are on top and plotted first (to be on the bottom)
+        # Sort so NaN cells render on the bottom; fill NaN with sentinel to avoid
+        # a squidpy+pandas 2.x bug where Categorical.map() returns Index (no .add_categories)
         adata_sorted = ad.concat([adata_sample[adata_sample.obs[ct_col].isna()], adata_sample[adata_sample.obs[ct_col].notna()]], uns_merge='first')
-        adata_sorted.uns[f'{ct_col}_colors'] = adata_sample.uns[f'{ct_col}_colors']
-        
+        new_cats = ['__other__'] + list(adata_sample.obs[ct_col].cat.categories)
+        adata_sorted.obs[ct_col] = pd.Categorical(adata_sorted.obs[ct_col].astype(object).fillna('__other__'), categories=new_cats)
+        adata_sorted.uns[f'{ct_col}_colors'] = np.concatenate([['#d3d3d3'], adata_sample.uns[f'{ct_col}_colors']])
+
         ax = sq.pl.spatial_scatter(
             adata_sorted,
             library_id="spatial",
             shape=None,
             color=[ct_col],
             size=size,
-            na_color='lightgray',
             return_ax=True,
             ax=axes[i],
         )
