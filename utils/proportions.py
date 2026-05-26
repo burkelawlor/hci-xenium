@@ -273,31 +273,86 @@ def plot_proportion_scatter_bar(
     return ax
 
 
-def plot_proportions_line(adata, groupby, ct_col, order=None, palette=None, save=False, figsize=None, title='default'):
+def plot_proportions_line(
+    adata, 
+    groupby, 
+    ct_col, 
+    order=None, 
+    palette=None, 
+    save=False, 
+    figsize=None, 
+    title='default', 
+    sample_name_col=None, 
+    error='sem'
+):
     proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
 
     # Ensure the x-tick order
     if order is None:
         x_ticks = list(proportions.index)
-    else:   
+    else:
         x_ticks = order
     x_pos = range(len(x_ticks))
 
-    fig, ax = plt.subplots(figsize=figsize)
+    # Build per-sample proportions if sample_name_col is provided
+    if sample_name_col is not None:
+        obs = adata.obs[[ct_col, groupby, sample_name_col]].copy()
+        sample_counts = obs.groupby(sample_name_col, observed=True).size()
+        per_sample = (
+            obs.groupby([sample_name_col, ct_col], observed=True)
+            .size()
+            .div(sample_counts)
+            .rename('proportion')
+            .reset_index()
+        )
+        sample_to_group = obs.drop_duplicates(sample_name_col).set_index(sample_name_col)[groupby]
+        per_sample['group'] = per_sample[sample_name_col].map(sample_to_group)
+
+    # Build palette once before the loop
+    ct_palette = None
+    if palette is None:
+        try:
+            ct_categories = list(adata.obs[ct_col].cat.categories)
+            ct_colors = adata.uns[f'{ct_col}_colors']
+            ct_palette = dict(zip(ct_categories, ct_colors))
+        except Exception:
+            ct_palette = None
+    else:
+        ct_palette = palette
+
+    _, ax = plt.subplots(figsize=figsize)
 
     for cell_type in proportions.columns:
         y = [proportions.loc[idx, cell_type] if idx in proportions.index else np.nan for idx in x_ticks]
-        
-        if palette is None:
-            try:
-                groups = adata.obs[ct_col].cat.categories
-                colors = adata.uns[f'{ct_col}_colors']
-                palette = dict(zip(groups, colors))
-                ax.plot(x_pos, y, marker='o', label=cell_type, color=palette[cell_type])
-            except:
-                ax.plot(x_pos, y, marker='o', label=cell_type)
+        color = ct_palette[cell_type] if (ct_palette and cell_type in ct_palette) else None
+
+        if sample_name_col is not None:
+            ct_data = per_sample[per_sample[ct_col] == cell_type]
+            means, errs = [], []
+            for g in x_ticks:
+                vals = ct_data[ct_data['group'] == g]['proportion'].values
+                if len(vals) > 0:
+                    means.append(np.mean(vals))
+                    if len(vals) > 1:
+                        errs.append(np.std(vals, ddof=1) / np.sqrt(len(vals)) if error == 'sem' else np.std(vals, ddof=1))
+                    else:
+                        errs.append(0.0)
+                else:
+                    means.append(np.nan)
+                    errs.append(0.0)
+
+            ax.errorbar(list(x_pos), means, yerr=errs, marker='o', label=cell_type,
+                        color=color, capsize=3, capthick=1)
+
+            for i, g in enumerate(x_ticks):
+                vals = ct_data[ct_data['group'] == g]['proportion'].values
+                if len(vals) > 0:
+                    ax.scatter([i] * len(vals), vals, color=color, s=15, alpha=0.5, zorder=3, linewidths=0)
         else:
-            ax.plot(x_pos, y, marker='o', label=cell_type, color=palette[cell_type])
+            if color is not None:
+                ax.plot(x_pos, y, marker='o', label=cell_type, color=color)
+            else:
+                ax.plot(x_pos, y, marker='o', label=cell_type)
 
     ax.set_xticks(x_pos)
     ax.set_xticklabels(x_ticks)
