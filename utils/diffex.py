@@ -383,7 +383,7 @@ class DiffExAnalysis:
         n = len(cts)
         nrows = math.ceil(n / ncols)
         fig, axes = plt.subplots(nrows, ncols, figsize=(subplot_size[0] * ncols, subplot_size[1] * nrows))
-        axes = axes.flatten() if n > 1 else [axes]
+        axes = np.atleast_1d(axes).flatten()
 
         for i, ct in enumerate(cts):
             ct_df = df[df['ct'] == ct]
