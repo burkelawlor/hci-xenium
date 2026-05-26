@@ -17,26 +17,33 @@ def pseudobulk(adata, sample_col, celltype_col, condition_col, min_cells=20, cou
     Args:
         adata: AnnData with raw integer counts in layers[counts_layer]
         sample_col: obs column for sample identity
-        celltype_col: obs column for cell type labels
+        celltype_col: obs column for cell type labels; if None, aggregates all cells together
         condition_col: obs column for condition labels (must be string/category, not bool)
         min_cells: minimum cells required per pseudobulk group
         counts_layer: layer name containing raw counts
 
     Returns:
         pb_counts: DataFrame (n_groups × n_genes) of summed integer counts
-        pb_meta: DataFrame (n_groups × 3) with sample, celltype, condition columns
+        pb_meta: DataFrame (n_groups × 2 or 3) with sample, [celltype,] condition columns
     """
     counts = adata.layers[counts_layer]
     if scipy.sparse.issparse(counts):
         counts = counts.toarray()
 
     genes = adata.var_names.tolist()
-    obs = adata.obs[[sample_col, celltype_col, condition_col]].copy()
-    obs['__group_key__'] = (
-        obs[sample_col].astype(str) + '||' +
-        obs[celltype_col].astype(str) + '||' +
-        obs[condition_col].astype(str)
-    )
+    obs_cols = [sample_col, celltype_col, condition_col] if celltype_col is not None else [sample_col, condition_col]
+    obs = adata.obs[obs_cols].copy()
+    if celltype_col is not None:
+        obs['__group_key__'] = (
+            obs[sample_col].astype(str) + '||' +
+            obs[celltype_col].astype(str) + '||' +
+            obs[condition_col].astype(str)
+        )
+    else:
+        obs['__group_key__'] = (
+            obs[sample_col].astype(str) + '||' +
+            obs[condition_col].astype(str)
+        )
 
     group_sizes = obs['__group_key__'].value_counts()
     keep = group_sizes[group_sizes >= min_cells].index
@@ -53,9 +60,10 @@ def pseudobulk(adata, sample_col, celltype_col, condition_col, min_cells=20, cou
     for i, r in enumerate(row_ids):
         pb[r] += counts_f[i]
 
+    meta_cols = [sample_col, celltype_col, condition_col] if celltype_col is not None else [sample_col, condition_col]
     pb_meta = pd.DataFrame(
         [k.split('||') for k in group_keys],
-        columns=[sample_col, celltype_col, condition_col],
+        columns=meta_cols,
         index=group_keys,
     ).astype('category')
     pb_counts = pd.DataFrame(pb, index=group_keys, columns=genes).astype(int)
@@ -86,7 +94,8 @@ def run_pydeseq2_per_celltype(pb_counts, pb_meta, celltype_col, condition_col, c
         design_formula = f'~ {condition_col}'
 
     results = {}
-    for ct, meta_ct in pb_meta.groupby(celltype_col):
+    groups = pb_meta.groupby(celltype_col) if celltype_col is not None else [('all', pb_meta)]
+    for ct, meta_ct in groups:
         idx = meta_ct.index
         counts_ct = pb_counts.loc[idx]
         meta_ct = meta_ct.copy()
@@ -261,7 +270,7 @@ class DiffExAnalysis:
         self,
         adata,
         sample_col: str,
-        celltype_col: str,
+        celltype_col: str | None,
         condition_col: str,
         contrast: tuple,
         *,
