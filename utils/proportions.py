@@ -282,10 +282,14 @@ def plot_proportions_line(
     save=False, 
     figsize=None, 
     title='default', 
-    sample_name_col=None, 
-    error='sem'
+    sample_name_col=None,
+    error='sem',
+    subset=None,
 ):
     proportions = adata.obs[[groupby,ct_col]].groupby(groupby, observed=True).value_counts(normalize=True).unstack()
+
+    if subset is not None:
+        proportions = proportions[[c for c in subset if c in proportions.columns]]
 
     # Ensure the x-tick order
     if order is None:
