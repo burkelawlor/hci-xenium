@@ -6,37 +6,37 @@ import matplotlib.pyplot as plt
 
 from utils.qc import flag_outliers_by_mad
 
-def propogate_subset_labels(parent_adata, subset_adata, key_added, key_to_add, merge_on='cell_id_unique'):
+def propogate_subset_labels(dest_adata, source_adata, dest_key, source_key, merge_on='cell_id_unique'):
     """
-    Propogate labels from subset_adata.obs[key_to_add] to parent_adata.obs[key_added].
+    Propogate labels from source_adata.obs[source_key] to dest_adata.obs[dest_key].
 
     Args:
-        parent_adata: AnnData object to add the labels to
-        subset_adata: AnnData object to get the labels from
-        key_added: Name of the new column to add to parent_adata.obs
-        key_to_add: Name of the column in subset_adata.obs to add to parent_adata.obs
-        merge_on: Name of the column in subset_adata.obs and parent_adata.obs to merge on
+        dest_adata: AnnData object to add the labels to
+        source_adata: AnnData object to get the labels from
+        dest_key: Name of the new column to add to dest_adata.obs
+        source_key: Name of the column in source_adata.obs to add to dest_adata.obs
+        merge_on: Name of the column in source_adata.obs and dest_adata.obs to merge on
     """
 
-    adata_new = parent_adata.copy()
+    adata_new = dest_adata.copy()
 
-    if key_added not in adata_new.obs.columns:
-        adata_new.obs[key_added] = np.nan
+    if dest_key not in adata_new.obs.columns:
+        adata_new.obs[dest_key] = np.nan
 
     # Build a lookup from merge key -> label, avoiding merge suffix collisions
-    # when key_added and key_to_add are the same column name.
+    # when dest_key and source_key are the same column name.
     subset_lookup = (
-        subset_adata.obs[[merge_on, key_to_add]]
-        .dropna(subset=[key_to_add])
+        source_adata.obs[[merge_on, source_key]]
+        .dropna(subset=[source_key])
         .drop_duplicates(subset=[merge_on], keep="last")
-        .set_index(merge_on)[key_to_add]
+        .set_index(merge_on)[source_key]
     )
 
     propagated = adata_new.obs[merge_on].map(subset_lookup)
-    adata_new.obs[key_added] = adata_new.obs[key_added].astype("object")
+    adata_new.obs[dest_key] = adata_new.obs[dest_key].astype("object")
     mask = propagated.notna()
-    adata_new.obs.loc[mask, key_added] = propagated.loc[mask].values
-    adata_new.obs[key_added] = adata_new.obs[key_added].astype("category")
+    adata_new.obs.loc[mask, dest_key] = propagated.loc[mask].values
+    adata_new.obs[dest_key] = adata_new.obs[dest_key].astype("category")
 
     return adata_new
 
