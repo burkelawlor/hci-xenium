@@ -1,90 +1,79 @@
-# HCI irAE
+# HCI Xenium
 
-Spatial transcriptomics analysis of immune-related adverse events (irAE) using 10x Genomics Xenium data. The project is notebook-driven, with shared utilities in `utils/`.
+Spatial transcriptomics analysis of 10x Genomics Xenium data performed by Burke Lawlor (advisor: Dekker Deacon). This project is part of the Judson Torres lab at the University of Utah's Hunstman Cancer Institute (HCI).
 
-The project is divided into two disease analyses:
+The scope of this repository covers multiple analyses which are connected by a general topic of understanding immune-related adverse events (irAE) in melanoma treatmnet.
 
-- **RMC analysis** (Reactive Mycosis-like Conditions): compares EPD (erosive pustular derm), PNT (papulonecrotic trunk), and NS (normal skin) samples. Actively in progress.
-- **SCLE analysis** (Subacute Cutaneous Lupus Erythematosus): compares SCLE and NS samples. Not yet started.
+Samples groups include:
 
-Analyses primarily use [squidpy](https://squidpy.readthedocs.io), [spatialdata](https://spatialdata.scverse.org), [anndata](https://anndata.readthedocs.io), and [PyDESeq2](https://pydeseq2.readthedocs.io).
+| Disease state                     | irAE Condition?   | n samples |
+| ----------                        | -----------       | --------- | 
+| Normal skin (NS)                  | No                | 4 | 
+| Reactive Mycosis-like Condition with erosive pustular dermatosis (RMC EPD)    | Yes      | 7 | 
+| Non-treatment-related adverse event erosive pustular dermatosis (NL EPD)      | No       | 3 | 
+| Reactive Mycosis-like Condition with Papulonecrotic Trunk (PNT)               | Yes      | 3 |  
+| Non irAE Subacute cutaneous lupus erythematosus (SCLE)                        | No       | 5 | 
+| non irAE Lichen planus (LP)               | No                | 3 | 
+| irAE Lichen planus pemphigoides (LPP)     | Yes               | 4 | 
+| Oral lichen planus (OLP)                  | ?                 | 6 | 
+| Mastocytosis (MAST)                       | ?                 | 6 | 
+| ? TC                                      | TC                | 1 |   
 
----
 
 ## Repository Layout
 
 ```
-notebooks/          # Main analysis notebooks (run sequentially)
-utils/              # Shared Python utilities
-figures/            # Output plots, organized by type
-output/             # Tabular analysis results (e.g. differential expression CSVs)
-scripts/            # Utility scripts
-tutorials/          # Reference notebooks for learning squidpy/spatialdata/scanpy
-data/               # Local data — not tracked in git (see Data section below)
+├── notebooks/          # Main analysis notebooks 
+    ├── rmc-analysis/
+    ├── lp-analysis/
+    ├── masto-analysis/
+├── utils/              # Shared Python utilities
+    ├── adata_processing.py     # anndata helpers
+    ├── adata_loading.py        # sample loading helpers
+    ├── diffex.py               # differential expression pipeline
+    ├── marker_genes.py         # maker gene maps
+    ├── proportions.py          # plotting and stats for proportion analyses
+    ├── qc.py                   # single cell qc helpers
+    ├── spatial.py              # spatial plotting functions
+├── figures/            # Output plots, organized by type
+├── output/             # Tabular analysis results
+├── scripts/            # Utility scripts
+    ├── omeconvert.py/          # converts a TIFF to OME-TIFF (H&E preprocessing)
+├── data/               # Local data — not tracked in git
+    ├── processed/      # Processed data
+        ├── adata/              # Processed AnnData h5ad files
+        ├── he/                 # Processed h&e images and alignment files
+    ├── raw/            # Original, immutable data
+        ├── lymphoid_regions/   # Lymphoid agg coords drawn by Dekker
+        ├── Xenium/             # Raw Xenium data plus metadata
 ```
 
-### `notebooks/`
-
-Notebooks are numbered and intended to run in order. Notebook `01` preprocesses all samples together; `02*` notebooks are specific to the RMC analysis.
-
-
-| Notebook                               | Purpose                                                                                  |
-| -------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `01_preprocessing_qc.ipynb`            | Load Xenium data for all samples, quality control, normalization, and initial clustering |
-| `02a_RMC_annotation_general.ipynb`     | Broad cell-type annotation of RMC samples                                                |
-| `02b_RMC_annotation_immune.ipynb`      | Immune cell subtype annotation                                                           |
-| `02c_RMC_annotation_endothelial.ipynb` | Endothelial cell annotation                                                              |
-| `02d_RMC_annotation_epithelial.ipynb`  | Epithelial (keratinocyte) annotation                                                     |
-| `02e_RMC_annotation_detailed.ipynb`    | Review and clean up detailed annotations across all cell-type subsets                    |
-| `02f_diffex.ipynb`                     | Differential expression analysis using PyDESeq2                                          |
-| `02g_lymphoid_aggregates.ipynb`        | Spatial analysis of manually annotated lymphoid aggregate regions                        |
-| `02h_h&e.ipynb`                        | Explore H&E image cuts with spatial overlays                                             |
-
-
-`notebooks/archived/`, `notebooks/scratch/`, and `notebooks/examples/` hold exploratory or deprecated notebooks and are not part of the main workflow.
-
-### `utils/`
-
-
-| File              | Contents                                                                     |
-| ----------------- | ---------------------------------------------------------------------------- |
-| `data_loading.py` | `xenium_paths` — dict mapping sample IDs to raw Xenium output directories    |
-| `cell_types.py`   | `CELL_TYPES_DETAILED` — hierarchical dict of cell types used for annotation  |
-| `plotting.py`     | Spatial plots, UMAP feature plots, proportion bar/line plots                 |
-| `processing.py`   | Subset label propagation, ranked gene extraction, MAD-based outlier flagging |
-| `diffex.py`       | Differential expression helpers (PyDESeq2 wrappers)                          |
-
-
-### `figures/`
-
-Output plots organized into subdirectories by plot type: `spatial_plots/`, `umaps/`, `feature_plots/`, `dotplots/`, `proportions/`.
-
-### `output/`
-
-Tabular results from differential expression and other analyses, saved as CSV files.
-
-### `scripts/`
-
-- `omeconvert.py` — converts a TIFF to OME-TIFF with pyramid levels for viewing in Xenium Explorer
-
-### `tutorials/`
-
-Reference notebooks covering scanpy basics, spatialdata, and squidpy integration. Not part of the main analysis workflow.
-
----
-
-## Data
-
-Raw and processed data live under `data/` and are not tracked in git. The data directory contains raw Xenium outputs (two batches), processed AnnData `.h5ad` files, H&E images, manually annotated lymphoid region files, and a sample metadata spreadsheet.
+**Notebooks** are organized by analysis project and numbered in order of intended run order. See README
 
 ---
 
 ## Environment
 
-The project uses a local Python 3.12 virtual environment at `.env/`:
+The project was developed in Python 3.12. A full pinned snapshot of the environment is in `requirements.txt`. Key top-level packages:
 
-```bash
-source .env/bin/activate
-jupyter lab
-```
-
+| Package | Version |
+|---|---|
+| `scanpy` | 1.12 |
+| `squidpy` | 1.8.1 |
+| `anndata` | 0.12.10 |
+| `spatialdata` | 0.7.2 |
+| `spatialdata-io` | 0.6.0 |
+| `spatialdata-plot` | 0.2.14 |
+| `pydeseq2` | 0.5.4 |
+| `gseapy` | 1.2.1 |
+| `sopa` | 2.2.5 |
+| `pandas` | 2.3.3 |
+| `numpy` | 2.4.2 |
+| `scipy` | 1.16.3 |
+| `scikit-learn` | 1.8.0 |
+| `statsmodels` | 0.14.6 |
+| `matplotlib` | 3.10.8 |
+| `seaborn` | 0.13.2 |
+| `glasbey` | 0.3.0 |
+| `adjustText` | 1.3.0 |
+| `geopandas` | 1.1.2 |
