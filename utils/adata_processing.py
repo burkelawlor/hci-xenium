@@ -63,3 +63,33 @@ def feature_plots_from_marker_genes(adata, marker_genes_dict, save=False, prefix
                 ax.figure.savefig(f"./figures/feature_plots/{prefix}_umap_{ct}.png", bbox_inches="tight")
 
         plt.show()
+
+        
+def explore_leiden_resolutions(adata, resolutions, seed=22):
+    """Plot UMAPs across multiple leiden resolutions to help choose one."""
+    for res in resolutions:
+        sc.tl.leiden(adata, resolution=res, flavor="igraph", n_iterations=2, random_state=seed)
+        sc.pl.umap(adata, color='leiden', title=f'leiden_{res}')
+
+
+def run_leiden_and_markers(adata, resolution, label_suffix, marker_genes, show_feature_plots=True, seed=22):
+    """
+    Run final leiden clustering, rank marker genes, and plot diagnostics.
+
+    Returns (leiden_label, genes_ranked_by_leiden).
+    """
+    leiden_label = f'leiden_{resolution}_{label_suffix}'
+    sc.tl.leiden(adata, resolution=resolution, key_added=leiden_label, flavor="igraph", n_iterations=2, random_state=seed)
+    sc.pl.umap(adata, color=[leiden_label], legend_loc='on data')
+
+    sc.tl.rank_genes_groups(adata, groupby=leiden_label)
+    sc.tl.dendrogram(adata, groupby=leiden_label)
+    sc.pl.rank_genes_groups_heatmap(adata, groupby=leiden_label, show_gene_labels=True, swap_axes=True, n_genes=5)
+    genes_ranked = get_ranked_genes_by_group(adata)
+
+    if show_feature_plots:
+        feature_plots_from_marker_genes(adata, marker_genes)
+
+    sc.pl.dotplot(adata, marker_genes, leiden_label, dendrogram=True)
+
+    return leiden_label, genes_ranked
