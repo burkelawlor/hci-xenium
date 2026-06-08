@@ -24,6 +24,7 @@ data/
 # figures/
 output/
 tutorials/
+references/
 notebooks/examples/
 notebooks/archived/
 xenium_5001.txt
