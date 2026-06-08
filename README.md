@@ -4,20 +4,32 @@ Spatial transcriptomics analysis of 10x Genomics Xenium data performed by Burke 
 
 The scope of this repository covers multiple analyses which are connected by a general topic of understanding immune-related adverse events (irAE) in melanoma treatmnet.
 
-Samples groups include:
+### Overview of samples
+| Disease state                     | Abbreviation | irAE   | n samples |
+| ----------                        | ------------ | ----   | --------- | 
+| Normal skin                       | NS           | No     | 4 | 
+| RMC induced EPD-like condition    | RMC EPD      | Yes    | 7 | 
+| Non-treatment related EPD         | NL EPD       | No     | 3 | 
+| RMC-induced PNT-like condition    | PNT          | Yes    | 3 |  
+| irAE SCLE                         | (SCLE)       | Yes    | 2 | 
+| Non-irAE SCLE                     | (SCLE)       | No     | 3 | 
+| Non-irAE LP                       | LP           | No     | 3 | 
+| non-irAE OLP                      | OLP          | No     | 6 | 
+| irAE LPP                          | LPP          | Yes    | 4 | 
+| Mastocytosis                      | MAST         | No     | 6 | 
+| Transition cases                  | TC           | No     | 1 |   
 
-| Disease state                     | irAE Condition?   | n samples |
-| ----------                        | -----------       | --------- | 
-| Normal skin (NS)                  | No                | 4 | 
-| Reactive Mycosis-like Condition with erosive pustular dermatosis (RMC EPD)    | Yes      | 7 | 
-| Non-treatment-related adverse event erosive pustular dermatosis (NL EPD)      | No       | 3 | 
-| Reactive Mycosis-like Condition with Papulonecrotic Trunk (PNT)               | Yes      | 3 |  
-| Non irAE Subacute cutaneous lupus erythematosus (SCLE)                        | No       | 5 | 
-| non irAE Lichen planus (LP)               | No                | 3 | 
-| irAE Lichen planus pemphigoides (LPP)     | Yes               | 4 | 
-| Oral lichen planus (OLP)                  | ?                 | 6 | 
-| Mastocytosis (MAST)                       | ?                 | 6 | 
-| ? TC                                      | TC                | 1 |   
+### Relevant definitions
+* **immune-related adverse event (irAE)**
+* **Revolutions medicine corporation (RMC)** - makes RMC-6236 aka daraxonrasib, a RAS-targeted chemotherapy drug
+* **Papulonecrotic Trunk (PNT)** - rare skin condition that appears as crops of small, dusky-red bumps
+* **Subacute cutaneous lupus erythematosus (SCLE)** - a distinct, highly photosensitive autoimmune skin condition
+* **Lichen planus (LP)** - a non-contagious, chronic inflammatory condition where your immune system mistakenly attacks cells of your skin, hair, nails, or mucous membranes
+* **Oral Lichen planus (OLP)** - LP of the mouth
+* **Lichen planus pemphigoides (LPP)** - a rare, acquired autoimmune disease that features overlapping symptoms of both lichen planus and bullous pemphigoid
+* **Mastocytosis** - a rare condition caused by the excessive buildup of mast cells
+* **Transition cases (TC)** 
+
 
 
 ## Repository Layout
