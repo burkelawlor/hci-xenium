@@ -388,7 +388,7 @@ class DiffExAnalysis:
         for i, ct in enumerate(cts):
             ct_df = df[df['ct'] == ct]
             plot_volcano(
-                ct_df, title=ct,
+                ct_df, title=title or ct,
                 padj_thresh=padj_thresh, lfc_thresh=lfc_thresh,
                 top_n_labels=top_n_labels, labels=labels,
                 figsize=subplot_size, ax=axes[i],
