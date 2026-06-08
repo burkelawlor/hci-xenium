@@ -9,13 +9,13 @@ import re
 
 ### Metadata and paths
 
-metadata = pd.read_excel("./data/metadata.xlsx", dtype=str).dropna(subset=["GnomEx ID"])
+metadata = pd.read_excel("./data/raw/metadata.xlsx", dtype=str).dropna(subset=["GnomEx ID"])
 
 batch_1 = ['TC1', 'SCLE1', 'SCLE2', 'PNT1', 'PNT2', 'EPD1', 'EPD2', 'EPD3', 'EPD4', 'EPD5', 'EPD6', 'EPD7']
 batch_2 = ['NS1', 'NS2', 'NS3', 'NS4', 'SCLE3', 'SCLE4', 'SCLE5', 'EPD8', 'EPD9', 'EPD10', 'LPP1']
 batch_3 = ['LPP2', 'LPP3', 'LPP4', 'LP1', 'LP2', 'LP3', 'OLP1', 'OLP2', 'MAST1', 'MAST2', 'MAST3', 'OLP3', 'OLP4', 'OLP5', 'MAST6', 'OLP6']
 
-data_root = Path("./data/Xenium")
+data_root = Path("./data/raw/Xenium")
 batch_1_root = data_root / '26697R'
 batch_2_root = data_root / '20260401__191124__28129'
 batch_3_root = data_root / '20260506__195908__28200'
