@@ -22,11 +22,9 @@ CLAUDE.md
 # Project specific directories
 data/
 # figures/
-# output/
+output/
 tutorials/
 notebooks/examples/
 notebooks/archived/
 xenium_5001.txt
 figures/plasma_cell_for_eric/*
-output/rmc_diffex_results.csv
-output/gsea_prerank_output/
