@@ -36,15 +36,15 @@ sample_sets = {
     'RMC_EPD': ['EPD1', 'EPD2', 'EPD3', 'EPD4', 'EPD5', 'EPD6', 'EPD7'],
     'NL_EPD': ['EPD8', 'EPD9', 'EPD10'],
     'PNT': ['PNT1', 'PNT2'],
-    'LP': ['LP1', 'LP2', 'LP3','LP4','LP5','LP6','LP7'],
-    'LPP': ['LPP1', 'LPP2', 'LPP3', 'LPP4','LPP5','LPP6','LPP7','LPP8','LPP9'],
+    'LP': ['LP1_LP2','LP3','LP4','LP5','LP6','LP7','LP8'],
+    'LPP': ['LPP1', 'LPP2', 'LPP3', 'LPP4'],
+    'ICI_LP': ['ICI_LP1', 'ICI_LP2', 'ICI_LP3', 'ICI_LP4'],
     'OLP': ['OLP1', 'OLP2', 'OLP3', 'OLP4', 'OLP5', 'OLP6'],
     'MAST': ['MAST1', 'MAST2', 'MAST3','MAST4', 'MAST5', 'MAST6'],
     'SCLE': ['SCLE1', 'SCLE2', 'SCLE3', 'SCLE4', 'SCLE5'],
     'TC': ['TC1','TC1_2','TC2','TC3','TC4_TC8','TC5'],
     'LM': ['LM1','LM2','LM3','LM4','LM6','LM7','LM8'],
 }
-
 
 
 def extract_XYcoords_for_cells(sdata):
