@@ -16,12 +16,15 @@ data_root = Path("./data/raw/Xenium")
 xenium_paths = {row['Study ID']: data_root / row['File path'] for index, row in metadata.iterrows()}
 
 
-### Batch information
+### Slide & batch information
+studyid_to_slide = metadata.set_index('Study ID')['Slide'].to_dict()
+
 batch_slides = {
     'batch_1': ['0076657', '0076678'],
     'batch_2': ['0084912', '0084920'],
     'batch_3': ['0076414', '0076660'],
     'australia': ['0029954', '0029955'],
+    'ici_lp': ['0080734', '0080735'],
 }
 slide_to_batch = {slide: batch for batch, slides in batch_slides.items() for slide in slides}
 studyid_to_batch = metadata.set_index('Study ID')['Slide'].map(slide_to_batch).to_dict()
@@ -59,5 +62,6 @@ def load_adata_from_xenium(sample_name):
     adata.obs['sample_name'] = sample_name
     adata.obs['sample_set'] = next(k for k, v in sample_sets.items() if sample_name in v)
     adata.obs['batch'] = studyid_to_batch[sample_name]
+    adata.obs['slide'] = studyid_to_slide[sample_name]
     
     return adata
