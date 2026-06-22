@@ -41,7 +41,8 @@ Muscular (via Claude)
 marker_genes_immune_general = {
     "T cell": ["CD3E", "CD3G", "CD8A", "CD4", "TRDC", "FOXP3"],
     "NK cell": ["NCR1", "KLRB1", "NCAM1"], #NCR1 = NKp46, KLRB1 = NK1.1, NCAM1 = CD56
-    "B cell": ["CD19"],
+    "B cell": ["CD19",'MS4A1'],
+    "Plasma cells":['XBP1','MZB1','IRF4'],
     "Macrophage": ["CD68", "CD14", "CD163", "MRC1"],
     "Langerhans": ["CD207"],
     "DC": ["CLEC10A", "CLEC9A", "LAMP3", "ITGAX", "CIITA", "CD1C", "CXCL10", "CXCL9"],
