@@ -461,7 +461,7 @@ def plot_gsea_heatmap(gsea_df, col_df, order=None, fdr_threshold=0.05, figsize=(
     if transpose:
         df_nes = df_nes.T
         df_fdr = df_fdr.T
-        figsize = (20, 4)
+        figsize = (figsize[1], figsize[0])
 
     annot_matrix = df_fdr.applymap(lambda x: '*' if pd.notna(x) and x < fdr_threshold else '')
 
