@@ -3,9 +3,11 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import matplotlib.pyplot as plt
+import seaborn as sns
 from adjustText import adjust_text
 from pydeseq2.dds import DeseqDataSet
 from pydeseq2.ds import DeseqStats
+import gseapy as gp
 
 
 def pseudobulk(adata, sample_col, celltype_col, condition_col, min_cells=20, counts_layer='raw_counts'):
@@ -399,3 +401,81 @@ class DiffExAnalysis:
 
         fig.tight_layout()
         return fig
+
+
+def run_gsea(results_df, gene_sets="MSigDB_Hallmark_2020", outdir=None):
+    """"
+    Run GSEA on the results_df.
+
+    Args:
+        results_df: results DataFrame from run_diffex()
+        gene_sets: gene sets to use for GSEA ("MSigDB_Hallmark_2020", "KEGG_2021_Human", "GO_Biological_Process_2023")
+        outdir: directory to save the GSEA results
+
+    Returns:
+        gsea_results_df: DataFrame with the GSEA results
+    """
+
+    df = results_df.copy()
+
+    # Build the ranking metric: signed -log10(padj)
+    # Clip pval away from 0 to avoid -inf
+    df["pvalue_clipped"] = df["pvalue"].clip(lower=1e-300)
+    df["rank_metric"] = np.sign(df["log2FoldChange"]) * -np.log10(df["pvalue_clipped"])
+
+    # gseapy expects a Series indexed by gene symbol, sorted descending
+    ranked = (
+        df.set_index("gene")["rank_metric"]
+        .dropna()
+        .sort_values(ascending=False)
+    )
+
+    # Run pre-ranked GSEA against MSigDB Hallmark gene sets
+    res = gp.prerank(
+        rnk=ranked,
+        gene_sets=gene_sets,
+        threads=4,
+        min_size=15,
+        max_size=500,
+        permutation_num=1000,
+        seed=42,
+        verbose=True,
+        outdir=outdir,
+    )
+
+    gsea_results_df = res.res2d
+    print(gsea_results_df.sort_values("FDR q-val").head(20))
+
+    return gsea_results_df
+
+
+
+def plot_gsea_heatmap(gsea_df, col_df, order=None, fdr_threshold=0.05, figsize=(4.5, 14), transpose=False):
+    df_nes = gsea_df.pivot(columns=col_df, index='Term', values='NES')
+    df_fdr = gsea_df.pivot(columns=col_df, index='Term', values='FDR q-val')
+
+    if order is not None:
+        df_nes = df_nes[order]
+        df_fdr = df_fdr[order]
+
+    if transpose:
+        df_nes = df_nes.T
+        df_fdr = df_fdr.T
+        figsize = (20, 4)
+
+    annot_matrix = df_fdr.applymap(lambda x: '*' if pd.notna(x) and x < fdr_threshold else '')
+
+    plt.figure(figsize=figsize)
+    sns.heatmap(
+        df_nes,
+        cmap='coolwarm',
+        annot=annot_matrix,
+        fmt='',
+        annot_kws={'size': 14, 'color': 'white', 'va': 'center'},
+        cbar_kws={"orientation": "vertical", "label": "Normalized Enrichment Score (NES)"},
+    )
+    plt.gca().xaxis.set_ticks_position('top')
+    plt.gca().xaxis.set_label_position('top')
+    plt.xticks(rotation=60, ha='left', rotation_mode='anchor', fontsize=10)
+    plt.subplots_adjust(top=0.85, bottom=0.17)
+    plt.show()
