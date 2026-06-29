@@ -21,6 +21,7 @@ The scope of this repository covers multiple analyses which are connected by a g
 
 ### Relevant definitions
 * **immune-related adverse event (irAE)**
+* **Erosive pustular dermatosis (EPD)** - a long-term skin disorder of the scalp and legs
 * **Revolutions medicine corporation (RMC)** - makes RMC-6236 aka daraxonrasib, a RAS-targeted chemotherapy drug
 * **Papulonecrotic Trunk (PNT)** - rare skin condition that appears as crops of small, dusky-red bumps
 * **Subacute cutaneous lupus erythematosus (SCLE)** - a distinct, highly photosensitive autoimmune skin condition
