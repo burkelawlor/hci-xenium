@@ -35,10 +35,13 @@ The scope of this repository covers multiple analyses which are connected by a g
 ## Repository Layout
 
 ```
+├── figures/            # Output plots, organized by type
 ├── notebooks/          # Main analysis notebooks 
     ├── rmc-analysis/
     ├── lp-analysis/
-    ├── masto-analysis/
+    └── masto-analysis/
+├── scripts/            # Utility scripts
+    └── omeconvert.py/          # converts a TIFF to OME-TIFF (H&E preprocessing)
 ├── utils/              # Shared Python utilities
     ├── adata_processing.py     # anndata helpers
     ├── adata_loading.py        # sample loading helpers
@@ -46,23 +49,30 @@ The scope of this repository covers multiple analyses which are connected by a g
     ├── marker_genes.py         # maker gene maps
     ├── proportions.py          # plotting and stats for proportion analyses
     ├── qc.py                   # single cell qc helpers
-    ├── spatial.py              # spatial plotting functions
-├── figures/            # Output plots, organized by type
-├── output/             # Tabular analysis results
-├── scripts/            # Utility scripts
-    ├── omeconvert.py/          # converts a TIFF to OME-TIFF (H&E preprocessing)
-├── data/               # Local data — not tracked in git
+    └── spatial.py              # spatial plotting functions
+├── output/             # Tabular analysis results - not tracked in git
+└── data/               # See below for more - not tracked in git
+```
+
+**Notebooks** are organized by analysis project and numbered in order of intended run order.
+
+
+## Data
+
+The data that powers these analyses is not tracked in git. The contents of the data/ directory can accessed at https://uofu.box.com/s/6dgjml3v3gnl9igxitjjm7fqo5icvcm9. To run the notebooks in this repository, download this folder from Box, rename it to `data`, and store it in your local hci-xenium repo. Note that ~275 gb of storage is required for the entire dataset. 
+
+The data directory is laid out as follows:
+```
+├── data/
     ├── processed/      # Processed data
         ├── adata/              # Processed AnnData h5ad files
         ├── he/                 # Processed h&e images and alignment files
     ├── raw/            # Original, immutable data
         ├── lymphoid_regions/   # Lymphoid agg coords drawn by Dekker
-        ├── Xenium/             # Raw Xenium data plus metadata
+        └── Xenium/             # Raw Xenium data plus metadata
+
 ```
 
-**Notebooks** are organized by analysis project and numbered in order of intended run order. See README
-
----
 
 ## Environment
 
