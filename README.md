@@ -16,6 +16,7 @@ The scope of this repository covers multiple analyses which are connected by a g
 | Non-irAE LP                       | LP           | No     | 3 | 
 | non-irAE OLP                      | OLP          | No     | 6 | 
 | irAE LPP                          | LPP          | Yes    | 4 | 
+| irAE ICI LP                       | ICI LP       | Yes    | 5 | 
 | Mastocytosis                      | MAST         | No     | 6 | 
 | Transition cases                  | TC           | No     | 1 |   
 
@@ -30,6 +31,7 @@ The scope of this repository covers multiple analyses which are connected by a g
 * **Lichen planus pemphigoides (LPP)** - a rare, acquired autoimmune disease that features overlapping symptoms of both lichen planus and bullous pemphigoid
 * **Mastocytosis** - a rare condition caused by the excessive buildup of mast cells
 * **Transition cases (TC)** 
+* **Immune chekpoint inhibitor associated LPP (ICI LPP)** - a common irAE in cancer patients treated with immune checkpoint inhibitors (ICIs), particularly anti-PD-1/PD-L1 therapies like pembrolizumab or nivolumab
 
 
 
