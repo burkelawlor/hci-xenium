@@ -19,8 +19,14 @@ __pycache__/
 .claude/
 CLAUDE.md
 
-# Project specific directories
-data/
+# Data directories
+data/raw/*
+data/processed/*
+data/external/*
+data/~$metadata.xlsx
+!data/*/.gitkeep
+
+# Other project directories
 # figures/
 output/
 tutorials/
