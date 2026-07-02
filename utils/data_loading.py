@@ -1,19 +1,27 @@
 from pathlib import Path
 import pandas as pd
-
-import spatialdata as sd
-from spatialdata_io import xenium
 import numpy as np
 import re
 
+import spatialdata as sd
+from spatialdata_io import xenium
+from spatialdata_io.readers.xenium import xenium_aligned_image
+from spatialdata.models import TableModel, get_table_keys
+
+
 
 ### Metadata and paths
-metadata = pd.read_excel("./data/metadata.xlsx", dtype=str).dropna(subset=["File path"])
+metadata = pd.read_csv("./data/metadata.csv", dtype=str).dropna(subset=["File path"])
 
 
 ### Xenium paths
 data_root = Path("./data/raw/Xenium")
 xenium_paths = {row['Study ID']: data_root / row['File path'] for index, row in metadata.iterrows()}
+
+### H&E paths
+_he_meta = metadata.dropna(subset=["H&E Image Path"])
+he_image_paths = _he_meta.set_index("Study ID")["H&E Image Path"].map(Path).to_dict()
+he_alignment_paths = _he_meta.set_index("Study ID")["H&E Alignment Path"].map(Path).to_dict()
 
 
 ### Slide & batch information
@@ -65,3 +73,76 @@ def load_adata_from_xenium(sample_name):
     adata.obs['slide'] = studyid_to_slide[sample_name]
     
     return adata
+
+
+def add_boundaries_annotation_table(
+    sdata,
+    source_key="table",
+    boundaries_element="cell_boundaries",
+    dest_key="table_boundaries",
+):
+    """Add a second AnnData that annotates only ``cell_boundaries``.
+
+    spatialdata-plot requires unique ``instance_key`` values per region inside a single table.
+    Duplicating rows in one table (Option A) triggers ValueError during plotting; use this
+    separate ``table_boundaries`` and pass ``table_name='table_boundaries'`` when rendering
+    boundaries.
+    """
+    table = sdata[source_key]
+    _, region_key, instance_key = get_table_keys(table)
+    if boundaries_element not in sdata.shapes:
+        raise KeyError(f"Missing shapes layer {boundaries_element!r} in sdata")
+    gdf = sdata.shapes[boundaries_element]
+    inst = table.obs[instance_key]
+    if not inst.isin(gdf.index).all():
+        n_miss = int((~inst.isin(gdf.index)).sum())
+        raise ValueError(
+            f"{n_miss} rows have {instance_key!r} values not in {boundaries_element!r} shape index"
+        )
+    tb = table.copy()
+    tb.obs[region_key] = pd.Categorical(
+        [boundaries_element] * tb.n_obs,
+        categories=[boundaries_element],
+    )
+    tb = TableModel.parse(
+        tb,
+        region=boundaries_element,
+        region_key=region_key,
+        instance_key=instance_key,
+        overwrite_metadata=True,
+    )
+    sdata[dest_key] = tb
+    return sdata
+
+
+def load_sdata_from_xenium(sample_name, merge_adata=None, add_he_image=True):
+    sdata = xenium(xenium_paths[sample_name], morphology_focus=False, cells_as_circles=True)
+
+    extract_XYcoords_for_cells(sdata)
+
+    sdata["table"].obs["cell_id_unique"] = sample_name + "_" + sdata["table"].obs["cell_id"]
+    sdata["table"].obs["sample_name"] = sample_name
+    sdata["table"].obs["sample_set"] = next(k for k, v in sample_sets.items() if sample_name in v)
+    sdata["table"].obs["batch"] = studyid_to_batch[sample_name]
+    sdata["table"].obs["slide"] = studyid_to_slide[sample_name]
+
+    if merge_adata is not None:
+        new_cols = [c for c in merge_adata.obs.columns if c not in sdata["table"].obs.columns]
+        if new_cols:
+            if "cell_id_unique" in merge_adata.obs.columns:
+                right = merge_adata.obs.set_index("cell_id_unique")[new_cols]
+            else:
+                right = merge_adata.obs[new_cols]
+                right.index.name = "cell_id_unique"
+            sdata["table"].obs = sdata["table"].obs.join(right, on="cell_id_unique")
+    
+    add_boundaries_annotation_table(sdata)
+
+    if add_he_image:
+        if sample_name in he_image_paths:
+            image = xenium_aligned_image(he_image_paths[sample_name], he_alignment_paths[sample_name])
+            sdata.images["he_stain"] = image
+        else:
+            print(f"Warning: no H&E image available for {sample_name}")
+
+    return sdata
