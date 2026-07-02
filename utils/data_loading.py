@@ -8,7 +8,7 @@ import re
 
 
 ### Metadata and paths
-metadata = pd.read_excel("./data/raw/metadata.xlsx", dtype=str).dropna(subset=["File path"])
+metadata = pd.read_excel("./data/metadata.xlsx", dtype=str).dropna(subset=["File path"])
 
 
 ### Xenium paths
