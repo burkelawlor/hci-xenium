@@ -8,14 +8,14 @@ from spatialdata_io import xenium
 from spatialdata_io.readers.xenium import xenium_aligned_image
 from spatialdata.models import TableModel, get_table_keys
 
-
+DATA_ROOT = Path("/Users/burkelawlor/Library/CloudStorage/Box-Box/hci-xenium-data")
 
 ### Metadata and paths
-metadata = pd.read_csv("./data/metadata.csv", dtype=str).dropna(subset=["File path"])
+metadata = pd.read_csv(DATA_ROOT / "metadata.csv", dtype=str).dropna(subset=["File path"])
 
 
 ### Xenium paths
-data_root = Path("./data/raw/Xenium")
+data_root = DATA_ROOT / "data/raw/Xenium"
 xenium_paths = {row['Study ID']: data_root / row['File path'] for index, row in metadata.iterrows()}
 
 ### H&E paths
