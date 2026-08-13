@@ -34,12 +34,10 @@ The scope of this repository covers multiple analyses which are connected by a g
 * **Immune chekpoint inhibitor associated LPP (ICI LPP)** - a common irAE in cancer patients treated with immune checkpoint inhibitors (ICIs), particularly anti-PD-1/PD-L1 therapies like pembrolizumab or nivolumab
 
 
-
 ## Repository Layout
 
 ```
-├── figures/            # Output plots, organized by type
-├── notebooks/          # Main analysis notebooks 
+└── notebooks/          # Main analysis notebooks 
     ├── rmc-analysis/
     ├── lp-analysis/
     └── masto-analysis/
@@ -53,27 +51,30 @@ The scope of this repository covers multiple analyses which are connected by a g
     ├── proportions.py          # plotting and stats for proportion analyses
     ├── qc.py                   # single cell qc helpers
     └── spatial.py              # spatial plotting functions
-├── output/             # Tabular analysis results - not tracked in git
-└── data/               # See below for more - not tracked in git
+├── .gitignore                
+├── requirements.txt          # Python package versions
+└── xenium_5001.txt           # Panel of 5001 genes in Xenium sequencing
 ```
 
 **Notebooks** are organized by analysis project and numbered in order of intended run order.
 
+## Data & outputs
 
-## Data
+The data and outputs (tabular and figures) from these analyses are tracked in git. Rather, these are automatically synced to Box at https://uofu.box.com/s/cckvbaneqbpjfsta8nhy475pa6rqannw. To sync locally, install [Box drive](https://www.box.com/drive) and configure the environment variable for that root directory. 
 
-The data that powers these analyses is not tracked in git. The contents of the data/ directory can accessed at https://uofu.box.com/s/6dgjml3v3gnl9igxitjjm7fqo5icvcm9. To run the notebooks in this repository, download this folder from Box, rename it to `data`, and store it in your local hci-xenium repo. Note that ~275 gb of storage is required for the entire dataset. 
-
-The data directory is laid out as follows:
+The Box directory is laid out as follows:
 ```
-├── data/
-    ├── processed/      # Processed data
-        ├── adata/              # Processed AnnData h5ad files
-        ├── he/                 # Processed h&e images and alignment files
-    ├── raw/            # Original, immutable data
-        ├── lymphoid_regions/   # Lymphoid agg coords drawn by Dekker
-        └── Xenium/             # Raw Xenium data plus metadata
-
+└── data/
+    └── raw/            # Original, immutable data
+        ├── Xenium/     # Raw Xenium data
+        └── he/         # H&E staind and alignment files
+    └── processed/      # Processed data
+        └── adata/      # Processed AnnData h5ad files from notebook outputs
+    └── external/       # Other inputs files used in analyses
+└── output/             # All outputs organized by project, tabular and figures
+    ├── rmc             # Results from RMC analyses
+    ├── lp              # Results from LP analyses
+    └── masto           # Results from mastocytosis analyses
 ```
 
 
