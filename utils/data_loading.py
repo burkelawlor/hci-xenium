@@ -8,6 +8,7 @@ from spatialdata_io import xenium
 from spatialdata_io.readers.xenium import xenium_aligned_image
 from spatialdata.models import TableModel, get_table_keys
 
+BOX_ROOT = Path("/Users/burkelawlor/Library/CloudStorage/Box-Box/hci-xenium")
 DATA_ROOT = Path("/Users/burkelawlor/Library/CloudStorage/Box-Box/hci-xenium/data")
 
 ### Metadata and paths
